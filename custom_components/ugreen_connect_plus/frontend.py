@@ -27,7 +27,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-CARD_FILE = "ugreen-wallpaper-card.js"
+CARD_FILE = "ugreen-plus-wallpaper-card.js"
 CARD_URL = f"/{DOMAIN}/{CARD_FILE}"
 _REGISTERED = f"{DOMAIN}_card_registered"
 

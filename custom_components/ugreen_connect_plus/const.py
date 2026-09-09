@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Final
 
-DOMAIN: Final = "ugreen_connect"
+DOMAIN: Final = "ugreen_connect_plus"
 
 CONF_REGION: Final = "region"
 CONF_LANGUAGE: Final = "language"
@@ -192,5 +192,5 @@ PICTURE_SETTLE_SECONDS: Final = 5
 # Dumped next to configuration.yaml on every refresh while `debug_dump` is on.
 # It is the raw, unmodified cloud payload and is what the entity layer is built
 # from -- see the integration README.
-DEBUG_DUMP_FILE: Final = "ugreen_connect_debug.json"
+DEBUG_DUMP_FILE: Final = "ugreen_connect_plus_debug.json"
 CONF_DEBUG_DUMP: Final = "debug_dump"

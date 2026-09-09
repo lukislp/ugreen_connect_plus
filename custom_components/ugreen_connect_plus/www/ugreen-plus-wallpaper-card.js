@@ -8,7 +8,7 @@
  * dragged, zoomed and rotated until the right part is inside it.
  *
  * Config:
- *   type: custom:ugreen-wallpaper-card
+ *   type: custom:ugreen-plus-wallpaper-card
  *   device_id: <the charger>        # optional if the entities are found
  *   title: Screensaver              # optional
  */
@@ -608,7 +608,7 @@ class UgreenWallpaperCard extends HTMLElement {
     ctx.drawImage(this._image, -this._image.width / 2, -this._image.height / 2);
 
     try {
-      await this._hass.callService('ugreen_connect', 'set_wallpaper', {
+      await this._hass.callService('ugreen_connect_plus', 'set_wallpaper', {
         device_id: deviceId,
         image: out.toDataURL('image/jpeg', 0.9),
       });
@@ -623,10 +623,10 @@ class UgreenWallpaperCard extends HTMLElement {
   }
 }
 
-customElements.define('ugreen-wallpaper-card', UgreenWallpaperCard);
+customElements.define('ugreen-plus-wallpaper-card', UgreenWallpaperCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: 'ugreen-wallpaper-card',
+  type: 'ugreen-plus-wallpaper-card',
   name: 'UGREEN Screensaver',
   description: "Screensaver settings and wallpaper, with a crop editor",
 });

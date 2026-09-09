@@ -1,4 +1,4 @@
-# UGREEN Connect for Home Assistant
+# UGREEN Connect Plus for Home Assistant
 
 Home Assistant integration for chargers managed by the **UgreenConnect** app
 (`*.ugreeniot.com`). Developed against a **UGREEN Nexode Pro 300W (X783)** —
@@ -20,6 +20,45 @@ so delete it or swap in the built-in `history-graph`.*
 > Not affiliated with, endorsed by, or supported by UGREEN. Trademarks belong to
 > their respective owners.
 
+## Where this comes from
+
+A fork of [s1mptom/ugreen_connect](https://github.com/s1mptom/ugreen_connect)
+by Pavel Turbin, who did the part that matters most: reading the charger's own
+binary protocol out of the app's traffic, along with the account API and the
+gateway that carries it. That decoding is his. It stays under his MIT licence
+and his copyright notice stays in this repository's LICENSE.
+
+This runs under its own domain, `ugreen_connect_plus`, so both can be
+installed at once and neither disturbs the other's entities.
+
+What it adds on top of 0.17.0:
+
+- **The custom charging mode, read in full.** Per-port wattage limits, the
+  shared C6+A setting, and which fast-charge protocols each group may
+  negotiate. Its name comes from the account, matched against the figures the
+  charger itself reports rather than assumed.
+- **A device per port.** A port answers for itself instead of contributing six
+  rows to a list of fifty.
+- **A charging flag per port**, taken from the session tracker rather than
+  from a wattage threshold, which on this charger cannot tell a full battery
+  from a bare cable.
+- **Lifetime energy counters**, per port and for the charger, ready for the
+  Energy dashboard without a Riemann helper.
+- **Events when a bout of charging starts and finishes**, carrying its
+  watt-hours, duration, peak and protocol.
+- **The age of the readings**: a timestamp of the last poll that came back
+  whole, which stays available while polls are failing.
+- **Polling that follows the work**, backing off six-fold while nothing is
+  charging -- roughly 17,000 requests a day become a fraction of that.
+- **The charging mode reported** rather than shown as `unknown` whenever the
+  charger sits in a mode this cannot set.
+- **A German translation**, and the setup dialog's own three fields translated
+  at all: they had no entries in any language, English included.
+
+The fixes were offered upstream first, as
+[PR #3](https://github.com/s1mptom/ugreen_connect/pull/3) and
+[issue #4](https://github.com/s1mptom/ugreen_connect/issues/4).
+
 ## Why it exists
 
 The charger has **no local API at all** — a full TCP 1–65535 scan finds nothing
@@ -29,11 +68,11 @@ get readings into Home Assistant without a Bluetooth proxy next to the device.
 
 ## Install
 
-**HACS** → three-dot menu → *Custom repositories* → add `s1mptom/ugreen_connect`
+**HACS** → three-dot menu → *Custom repositories* → add `lukislp/ugreen_connect_plus_plus`
 as type *Integration* → install → **restart Home Assistant** → *Settings →
 Devices & Services → Add integration → UGREEN Connect*.
 
-Manual: copy `custom_components/ugreen_connect` into your `config/` and restart.
+Manual: copy `custom_components/ugreen_connect_plus` into your `config/` and restart.
 
 Sign in with your normal UGREEN account e-mail and password, and pick the region
 your account belongs to — the same one the app shows. Accounts are not shared
@@ -188,7 +227,7 @@ For automations there is a service taking a local `path`, a `url`, or base64 in
 `image`:
 
 ```yaml
-action: ugreen_connect.set_wallpaper
+action: ugreen_connect_plus.set_wallpaper
 data:
   device_id: 0123456789abcdef0123456789abcdef
   path: /config/www/desk.jpg
@@ -272,7 +311,7 @@ property, which is what makes it download the file.
 | Charging efficiency | 90 % | how much of what leaves the port reaches the cell; the rest is heat |
 | Session ends after | 120 min | how long a port must deliver nothing before its charging session is finished; see [Charging sessions](#charging-sessions) for the trade-off |
 | Region | as set up | only if the account itself moved servers; the password is re-checked first |
-| Debug snapshot | off | writes the unedited cloud payload to `ugreen_connect_debug.json` |
+| Debug snapshot | off | writes the unedited cloud payload to `ugreen_connect_plus_debug.json` |
 
 Five seconds keeps the wattage live enough to watch a laptop charge. It is also
 a lot of traffic against someone else's API, so raise it if you would rather be
@@ -294,7 +333,7 @@ is checked against both rather than mocked.
 ## Translating
 
 Everything the integration says goes through
-`custom_components/ugreen_connect/translations/`. Copy `en.json`, name it for
+`custom_components/ugreen_connect_plus/translations/`. Copy `en.json`, name it for
 your language, translate the values, and open a pull request. English, German
 and Russian exist so far.
 

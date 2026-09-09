@@ -6,7 +6,7 @@ set_wallpaper:
       required: true
       selector:
         device:
-          integration: ugreen_connect
+          integration: ugreen_connect_plus
     path:
       required: false
       example: /config/www/desk.jpg

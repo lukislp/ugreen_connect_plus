@@ -1,0 +1,20 @@
+{
+  "domain": "ugreen_connect_plus",
+  "name": "UGREEN Connect Plus",
+  "after_dependencies": [
+    "lovelace"
+  ],
+  "codeowners": [
+    "@lukislp"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "http",
+    "frontend"
+  ],
+  "documentation": "https://github.com/lukislp/ugreen_connect_plus",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/lukislp/ugreen_connect_plus/issues",
+  "version": "0.18.0"
+}
