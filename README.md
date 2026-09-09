@@ -457,6 +457,21 @@ triggers:
   again. The reverse is not true — **the app caches**, and keeps showing its old
   value until it is force-stopped and reopened.
 
+## One instance per account
+
+The charger answers into a single cloud property, and the gateway appears to
+keep one session per account. Two Home Assistants signed in to the same UGREEN
+account therefore do not merely share a charger — they unseat each other. Each
+login invalidates the other's token, whose next request is rejected, which
+makes it log in again; the cloud eventually answers `Too many requests` (code
+770003) and stops talking to both.
+
+Watched, not deduced: a second instance made every entity of the charger blink
+out and back every few seconds, and the account was rate limited within two
+minutes. This release backs off rather than feeding the loop, but the way out
+is to run one instance against an account. A second household member's phone
+app is fine; a second Home Assistant is not.
+
 ## Contributing
 
 Issues and pull requests are welcome, especially from owners of other UGREEN
