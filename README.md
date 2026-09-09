@@ -188,14 +188,14 @@ HACS and no resource to register — install the integration, restart, and the
 card is available. Add it to a dashboard with *Add card → Manual*:
 
 ```yaml
-type: custom:ugreen-wallpaper-card
+type: custom:ugreen-plus-wallpaper-card
 ```
 
 That is the whole configuration for a single charger. With more than one, name
 the device:
 
 ```yaml
-type: custom:ugreen-wallpaper-card
+type: custom:ugreen-plus-wallpaper-card
 device_id: 0123456789abcdef0123456789abcdef   # Settings → Devices → your charger, from the URL
 title: Screensaver                            # optional; the card's heading
 ```
@@ -311,6 +311,7 @@ property, which is what makes it download the file.
 | Charging efficiency | 90 % | how much of what leaves the port reaches the cell; the rest is heat |
 | Session ends after | 120 min | how long a port must deliver nothing before its charging session is finished; see [Charging sessions](#charging-sessions) for the trade-off |
 | Region | as set up | only if the account itself moved servers; the password is re-checked first |
+| A device for each port | on | every port is its own device; off puts everything on the charger. Switching moves entities between devices, keeping their history but not what points at the device |
 | Debug snapshot | off | writes the unedited cloud payload to `ugreen_connect_plus_debug.json` |
 
 Five seconds keeps the wattage live enough to watch a laptop charge. It is also
@@ -338,7 +339,7 @@ your language, translate the values, and open a pull request. English, German
 and Russian exist so far.
 
 The dashboard card keeps its own text in one table at the top of
-`www/ugreen-wallpaper-card.js`: copy the `en` block, key it by language code,
+`www/ugreen-plus-wallpaper-card.js`: copy the `en` block, key it by language code,
 and translate. Missing keys fall back to English, so a partial translation is
 fine.
 

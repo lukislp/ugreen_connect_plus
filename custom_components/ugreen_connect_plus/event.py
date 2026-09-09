@@ -60,12 +60,12 @@ class UgreenChargingEvent(UgreenPortEntity, EventEntity):
     """Fires when a bout of charging starts on this port, and when it ends."""
 
     _attr_event_types = [STARTED, ENDED]
-    _attr_translation_key = "charging"
     _attr_icon = "mdi:battery-charging"
 
     def __init__(self, coordinator: UgreenCoordinator, key: str, port: str) -> None:
         super().__init__(coordinator, key)
         self._port = port
+        self._named("charging")
         self._attr_unique_id = f"{key}_{port}_charging_event"
         # What the last poll saw, so a change can be recognised as one.
         self._started_at: float | None = None

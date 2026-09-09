@@ -194,3 +194,11 @@ PICTURE_SETTLE_SECONDS: Final = 5
 # from -- see the integration README.
 DEBUG_DUMP_FILE: Final = "ugreen_connect_plus_debug.json"
 CONF_DEBUG_DUMP: Final = "debug_dump"
+
+# One Home Assistant device per socket, or one for the whole charger. A port is
+# what people reason about -- "what is C3 doing" -- and eight of them with six
+# readings each turn one device page into a list of fifty. But it is also eight
+# more rows in every device list and every area, and whether that trade is
+# worth making is not something this can decide for anyone.
+CONF_PORT_DEVICES: Final = "port_devices"
+DEFAULT_PORT_DEVICES: Final = True
