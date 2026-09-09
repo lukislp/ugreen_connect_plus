@@ -222,6 +222,9 @@
     "image": {
       "product": {
         "name": "Produktbild"
+      },
+      "wallpaper": {
+        "name": "Aktuelles Hintergrundbild"
       }
     }
   },

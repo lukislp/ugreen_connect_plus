@@ -21,6 +21,7 @@ from homeassistant.util import dt as dt_util
 from . import UgreenConfigEntry
 from .coordinator import UgreenCoordinator, device_key
 from .entity import UgreenDeviceEntity
+from .image_proxy import WallpaperUnavailable, async_wallpaper_bytes
 
 
 async def async_setup_entry(
@@ -29,24 +30,27 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator = entry.runtime_data
-    known: set[str] = set()
+    known_product: set[str] = set()
+    known_wallpaper: set[str] = set()
 
     @callback
     def _add_new_devices() -> None:
-        new = []
+        new: list[ImageEntity] = []
         for device in coordinator.data.get("devices", []):
             key = device_key(device)
-            if key is None or key in known:
+            if key is None:
                 continue
+            if key not in known_wallpaper:
+                known_wallpaper.add(key)
+                new.append(UgreenWallpaperImage(hass, coordinator, key))
             # The product metadata is fetched once per charger and can fail on
             # its own without taking the readings down. Until it arrives there
             # is no picture to show, so the entity waits rather than appearing
-            # empty.
+            # empty -- which is why this one is tracked separately.
             product = coordinator.data.get("detail", {}).get(key) or {}
-            if not product.get("image"):
-                continue
-            known.add(key)
-            new.append(UgreenProductImage(hass, coordinator, key))
+            if key not in known_product and product.get("image"):
+                known_product.add(key)
+                new.append(UgreenProductImage(hass, coordinator, key))
         if new:
             async_add_entities(new)
 
@@ -78,3 +82,57 @@ class UgreenProductImage(UgreenDeviceEntity, ImageEntity):
             self._attr_image_last_updated = dt_util.utcnow()
             self._cached_image = None
         super()._handle_coordinator_update()
+
+
+class UgreenWallpaperImage(UgreenDeviceEntity, ImageEntity):
+    """The picture the charger's screen is showing.
+
+    Not fetched the way the product photo is. The links UGREEN issues for a
+    wallpaper are signed and expire within minutes, so handing one to Home
+    Assistant to fetch later would produce a broken picture more often than
+    not. The bytes are read through the same path the dashboard card uses,
+    which resolves the link at the moment it is needed and refreshes it once if
+    it has gone stale.
+    """
+
+    _attr_translation_key = "wallpaper"
+
+    def __init__(
+        self, hass: HomeAssistant, coordinator: UgreenCoordinator, key: str
+    ) -> None:
+        super().__init__(coordinator, key)
+        ImageEntity.__init__(self, hass)
+        self._attr_unique_id = f"{key}_wallpaper_image"
+        self._shown: str | None = self._current
+        self._attr_image_last_updated = dt_util.utcnow()
+
+    @property
+    def _current(self) -> str | None:
+        """The six-character id of the picture on the screen, if there is one."""
+        return (self._reading or {}).get("wallpaper")
+
+    @property
+    def available(self) -> bool:
+        # "None" is a real setting on this charger -- the screen simply shows
+        # the clock -- and there is then no picture to publish.
+        return super().available and bool(self._current)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        if (current := self._current) != self._shown:
+            self._shown = current
+            self._attr_image_last_updated = dt_util.utcnow()
+            self._cached_image = None
+        super()._handle_coordinator_update()
+
+    async def async_image(self) -> bytes | None:
+        if not (image_id := self._current):
+            return None
+        try:
+            found = await async_wallpaper_bytes(self.hass, self.coordinator, image_id)
+        except WallpaperUnavailable:
+            return None
+        if found is None:
+            return None
+        self._attr_content_type = found[1]
+        return found[0]
