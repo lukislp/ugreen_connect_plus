@@ -94,6 +94,33 @@
       },
       "custom_mode_name": {
         "name": "Custom mode"
+      },
+      "port_power_qualified": {
+        "name": "{port} Power"
+      },
+      "port_voltage_qualified": {
+        "name": "{port} Voltage"
+      },
+      "port_current_qualified": {
+        "name": "{port} Current"
+      },
+      "port_protocol_qualified": {
+        "name": "{port} Protocol"
+      },
+      "session_energy_qualified": {
+        "name": "{port} Session energy"
+      },
+      "session_charge_qualified": {
+        "name": "{port} Session charge"
+      },
+      "custom_limit_qualified": {
+        "name": "{port} Custom limit"
+      },
+      "custom_limit_shared_qualified": {
+        "name": "{port} Custom limit (shared with {other})"
+      },
+      "energy_total_qualified": {
+        "name": "{port} Total energy"
       }
     },
     "number": {
@@ -156,11 +183,25 @@
     "binary_sensor": {
       "charging": {
         "name": "Charging"
+      },
+      "charging_qualified": {
+        "name": "{port} Charging"
       }
     },
     "event": {
       "charging": {
         "name": "Charging",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "started": "Started",
+              "ended": "Ended"
+            }
+          }
+        }
+      },
+      "charging_qualified": {
+        "name": "{port} Charging",
         "state_attributes": {
           "event_type": {
             "state": {
@@ -206,7 +247,8 @@
           "debug_dump": "Write a raw cloud snapshot to the config folder",
           "nominal_voltage": "Battery voltage",
           "efficiency": "Charging efficiency",
-          "session_idle_end": "Session ends after"
+          "session_idle_end": "Session ends after",
+          "port_devices": "A device for each port"
         },
         "data_description": {
           "scan_interval": "How often a reading arrives. Measured start to start, so the wait for the charger to answer comes out of this rather than being added to it. 5 s keeps the wattage live; raise it to lean less on UGREEN's servers.",
@@ -214,7 +256,8 @@
           "debug_dump": "Saves ugreen_connect_plus_debug.json on every refresh. It is the unedited cloud payload.",
           "nominal_voltage": "Used only to read a session's watt-hours back as milliamp-hours. 3.85 V is the nominal cell voltage of phones, earbuds and handhelds; a laptop's pack is far higher, and its milliamp-hour figure means nothing until this matches it.",
           "efficiency": "How much of what leaves the port reaches the cell. The rest becomes heat in the cable and the device's own converter.",
-          "session_idle_end": "How long a port must deliver nothing before its charging session is called finished and the next one may start. The charger keeps a port live for a bare cable, so this is the only thing that can end a session. Long enough that a phone topping itself up at 100% stays one session; shorter if you swap devices on the same cable within a couple of hours."
+          "session_idle_end": "How long a port must deliver nothing before its charging session is called finished and the next one may start. The charger keeps a port live for a bare cable, so this is the only thing that can end a session. Long enough that a phone topping itself up at 100% stays one session; shorter if you swap devices on the same cable within a couple of hours.",
+          "port_devices": "Every port appears as a device of its own, so a port's page answers for that port and nothing else. Turned off, everything hangs on the charger: one device instead of nine, and fifty entities on one page. Changing this moves entities between devices -- their history is kept, but anything pointing at a device rather than an entity, such as an area, a device card or a device trigger, has to be set again."
         }
       }
     },

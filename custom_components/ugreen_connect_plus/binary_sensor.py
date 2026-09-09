@@ -55,11 +55,11 @@ class UgreenChargingSensor(UgreenPortEntity, BinarySensorEntity):
     """On while charge is actually flowing into whatever is on the port."""
 
     _attr_device_class = BinarySensorDeviceClass.BATTERY_CHARGING
-    _attr_translation_key = "charging"
 
     def __init__(self, coordinator: UgreenCoordinator, key: str, port: str) -> None:
         super().__init__(coordinator, key)
         self._port = port
+        self._named("charging")
         self._attr_unique_id = f"{key}_{port}_charging"
 
     @property

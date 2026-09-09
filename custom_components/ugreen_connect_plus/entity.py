@@ -11,7 +11,7 @@ from homeassistant.helpers.device_registry import (
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import CONF_PORT_DEVICES, DEFAULT_PORT_DEVICES, DOMAIN
 from .coordinator import UgreenCoordinator, device_key
 
 # extra.onlineStatus / extra.networkStatus are 1 when up, 0 when down.
@@ -87,13 +87,33 @@ class UgreenPortEntity(UgreenDeviceEntity):
     Every entity here belongs to a socket. The custom mode's shared C6+A
     setting is published once per socket rather than as a device of its own,
     which would be a device that is not a port and holds a single entity.
+
+    Whether those sockets become devices is the owner's choice. When they do
+    not, everything lands on the charger, and the entity names have to carry
+    the port themselves -- otherwise fifty entities all read "Power".
     """
 
     _port: str
 
     @property
+    def _own_device(self) -> bool:
+        return self.coordinator.config_entry.options.get(
+            CONF_PORT_DEVICES, DEFAULT_PORT_DEVICES
+        )
+
+    def _named(self, key: str) -> None:
+        """Name this entity, qualified by its port only where it has to be.
+
+        On a port's own page "Power" says everything; on the charger's it says
+        nothing without the port in front of it.
+        """
+        self._attr_translation_key = key if self._own_device else f"{key}_qualified"
+
+    @property
     def device_info(self) -> DeviceInfo:
         charger = super().device_info
+        if not self._own_device:
+            return charger
         info = DeviceInfo(
             identifiers={(DOMAIN, f"{self._key}_{self._port}")},
             manufacturer="UGREEN",

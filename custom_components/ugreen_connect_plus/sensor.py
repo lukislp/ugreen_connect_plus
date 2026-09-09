@@ -255,6 +255,7 @@ class UgreenPortEnergySensor(UgreenPortEntity, _UgreenEnergyTotal):
         super().__init__(coordinator, key)
         self._port = port
         self._attr_translation_placeholders = {"port": port}
+        self._named("energy_total")
         self._attr_unique_id = f"{key}_{port}_energy_total"
 
     def _delivered_wh(self) -> float:
@@ -337,7 +338,7 @@ class UgreenPortSensor(UgreenPortEntity, SensorEntity):
         self._attr_suggested_display_precision = digits
         # Named through a placeholder so a translation only has to give the
         # word, not one entry per port.
-        self._attr_translation_key = f"port_{kind}"
+        self._named(f"port_{kind}")
         self._attr_translation_placeholders = {"port": port}
         self._attr_unique_id = f"{key}_{port}_{kind}"
 
@@ -363,7 +364,7 @@ class UgreenPortProtocolSensor(UgreenPortEntity, SensorEntity):
     def __init__(self, coordinator: UgreenCoordinator, key: str, port: str) -> None:
         super().__init__(coordinator, key)
         self._port = port
-        self._attr_translation_key = "port_protocol"
+        self._named("port_protocol")
         self._attr_translation_placeholders = {"port": port}
         self._attr_unique_id = f"{key}_{port}_protocol"
 
@@ -410,9 +411,7 @@ class UgreenCustomLimitSensor(UgreenPortEntity, SensorEntity):
         # the same for every port but the shared pair.
         self._port = port
         self._group_name = group or port
-        self._attr_translation_key = (
-            "custom_limit_shared" if shared_with else "custom_limit"
-        )
+        self._named("custom_limit_shared" if shared_with else "custom_limit")
         self._attr_translation_placeholders = {"port": port, "other": shared_with or ""}
         self._attr_unique_id = f"{key}_{port}_custom_limit"
 
@@ -530,13 +529,13 @@ class UgreenSessionEnergySensor(UgreenSessionSensor, RestoreEntity):
     sensors, so exactly one of them may hand it back after a restart.
     """
 
-    _attr_translation_key = "session_energy"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.WATT_HOUR
     _attr_suggested_display_precision = 1
 
     def __init__(self, coordinator: UgreenCoordinator, key: str, port: str) -> None:
         super().__init__(coordinator, key, port)
+        self._named("session_energy")
         self._attr_unique_id = f"{key}_{port}_session_energy"
 
     async def async_added_to_hass(self) -> None:
@@ -582,13 +581,13 @@ class UgreenSessionChargeSensor(UgreenSessionSensor):
     An estimate, not a measurement: see ``session.charge_mah`` for what is assumed.
     """
 
-    _attr_translation_key = "session_charge"
     _attr_native_unit_of_measurement = "mAh"
     _attr_icon = "mdi:battery-charging"
     _attr_suggested_display_precision = 0
 
     def __init__(self, coordinator: UgreenCoordinator, key: str, port: str) -> None:
         super().__init__(coordinator, key, port)
+        self._named("session_charge")
         self._attr_unique_id = f"{key}_{port}_session_charge"
 
     @property

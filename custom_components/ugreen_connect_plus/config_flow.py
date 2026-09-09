@@ -34,11 +34,13 @@ from .const import (
     CONF_EFFICIENCY,
     CONF_IDLE_END,
     CONF_NOMINAL_VOLTAGE,
+    CONF_PORT_DEVICES,
     CONF_REGION,
     DEFAULT_EFFICIENCY,
     DEFAULT_IDLE_END,
     DEFAULT_LANGUAGE,
     DEFAULT_NOMINAL_VOLTAGE,
+    DEFAULT_PORT_DEVICES,
     DEFAULT_REGION,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -128,6 +130,7 @@ OPTIONS_SCHEMA = vol.Schema(
                 mode=NumberSelectorMode.BOX,
             )
         ),
+        vol.Required(CONF_PORT_DEVICES, default=DEFAULT_PORT_DEVICES): bool,
         vol.Required(CONF_DEBUG_DUMP, default=False): bool,
     }
 )
@@ -262,6 +265,7 @@ class UgreenOptionsFlow(OptionsFlow):
                         CONF_NOMINAL_VOLTAGE: float(user_input[CONF_NOMINAL_VOLTAGE]),
                         CONF_EFFICIENCY: int(user_input[CONF_EFFICIENCY]),
                         CONF_IDLE_END: int(user_input[CONF_IDLE_END]),
+                        CONF_PORT_DEVICES: bool(user_input[CONF_PORT_DEVICES]),
                     }
                 )
 
@@ -274,6 +278,9 @@ class UgreenOptionsFlow(OptionsFlow):
             ),
             CONF_EFFICIENCY: entry.options.get(CONF_EFFICIENCY, DEFAULT_EFFICIENCY),
             CONF_IDLE_END: entry.options.get(CONF_IDLE_END, DEFAULT_IDLE_END),
+            CONF_PORT_DEVICES: entry.options.get(
+                CONF_PORT_DEVICES, DEFAULT_PORT_DEVICES
+            ),
             CONF_REGION: entry.data.get(CONF_REGION, DEFAULT_REGION),
             CONF_DEBUG_DUMP: entry.data.get(CONF_DEBUG_DUMP, False),
         }
