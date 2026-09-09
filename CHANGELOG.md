@@ -1,3 +1,10 @@
+# [0.23.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.22.1...v0.23.0) (2026-09-09)
+
+
+### Features
+
+* show the manufacturer's photo of the charger ([edf37ff](https://github.com/lukislp/ugreen_connect_plus/commit/edf37ff65766022f56271efb5bdc54dd1ff8f5b1))
+
 ## [0.22.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.22.0...v0.22.1) (2026-09-09)
 
 
