@@ -1,3 +1,10 @@
+# [0.22.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.21.1...v0.22.0) (2026-09-09)
+
+
+### Features
+
+* say when the readings have gone stale, and allow a reconfigure ([ef3d260](https://github.com/lukislp/ugreen_connect_plus/commit/ef3d26053c02aa1bfd9fd8548613fe4345b21049))
+
 ## [0.21.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.21.0...v0.21.1) (2026-09-09)
 
 
