@@ -1,0 +1,157 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Both validators track moving targets, so a build that is green today can
+    # rot quietly without anyone touching this repository.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Checks -- on every push to main and every pull request
+  # -------------------------------------------------------------------------
+  test-hacs-validation:
+    name: HACS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Referenced by branch on purpose: it validates against what HACS
+      # requires now, not a ruleset frozen at the time of writing.
+      - uses: hacs/action@main
+        with:
+          category: integration
+
+  test-hassfest:
+    name: Home Assistant manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # hassfest runs from an image on ghcr.io, and an anonymous pull is rate
+      # limited hard enough that the same commit passes or fails depending on
+      # the hour. The runner already holds a token that lifts the limit.
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - uses: home-assistant/actions/hassfest@master
+
+  test-unit:
+    name: Session logic
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      # session.py carries no Home Assistant imports precisely so its rules can
+      # be exercised without installing one; the tests load it straight from
+      # its file and fail loudly if that ever stops being true.
+      - run: pip install pytest
+      - run: pytest tests -q
+
+  # -------------------------------------------------------------------------
+  # Release -- pushes to main only, and only when the commits ask for one
+  # -------------------------------------------------------------------------
+  get-version:
+    name: Is a release due
+    needs: [test-hacs-validation, test-hassfest, test-unit]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ugreen-connect-plus-release-chain
+      cancel-in-progress: false
+    # Even a dry run has its token checked for push access, so a read-only one
+    # fails outright. Nothing is written: dry_run skips every step that would.
+    permissions:
+      contents: write
+    outputs:
+      published: ${{ steps.semrel.outputs.new_release_published }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The branch tip rather than the pushed SHA: a release commit marked
+          # skip ci can land between the push and this job, and semantic-release
+          # then refuses to act on what it sees as a stale branch.
+          ref: main
+          fetch-depth: 0
+      - id: semrel
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        with:
+          dry_run: true
+          extra_plugins: |
+            @semantic-release/changelog@7.0.0
+            @semantic-release/exec@7.1.0
+            @semantic-release/github@12.0.9
+            @semantic-release/git@11.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Nothing to release
+        if: steps.semrel.outputs.new_release_published != 'true'
+        run: |
+          echo "No releasable commits since the last tag -- documentation, chores and CI changes do not cut a release. The ordinary case, not a failure." | tee -a "$GITHUB_STEP_SUMMARY"
+
+  semantic-release:
+    name: Release
+    needs: [get-version]
+    if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ugreen-connect-plus-release-chain
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - id: semrel
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        with:
+          extra_plugins: |
+            @semantic-release/changelog@7.0.0
+            @semantic-release/exec@7.1.0
+            @semantic-release/github@12.0.9
+            @semantic-release/git@11.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+      # Guards the narrow window where a push lands on main between this job's
+      # checkout and its own push. The concurrency group already serialises
+      # this workflow, so only a genuinely external push can cause it.
+      - if: steps.semrel.outcome == 'failure'
+        name: Diagnose before retrying
+        run: |
+          git fetch origin main
+          BEFORE="$(git rev-parse HEAD)"
+          AFTER="$(git rev-parse origin/main)"
+          if [ "$BEFORE" != "$AFTER" ]; then
+            echo "origin/main moved since checkout ($BEFORE -> $AFTER), which is the race this retry exists for."
+          else
+            echo "::warning::origin/main did not move, so this is probably not that race. Retrying anyway, but read the failure above before assuming otherwise."
+          fi
+          git checkout -B main origin/main
+      - if: steps.semrel.outcome == 'failure'
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        with:
+          extra_plugins: |
+            @semantic-release/changelog@7.0.0
+            @semantic-release/exec@7.1.0
+            @semantic-release/github@12.0.9
+            @semantic-release/git@11.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
