@@ -1,3 +1,10 @@
+## [0.19.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.19.0...v0.19.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* stop the setup dialog asking for what it discards ([f7db6c1](https://github.com/lukislp/ugreen_connect_plus/commit/f7db6c1ec711371a42a353fac40e5b5f5786fb9c)), closes [s1mptom/ugreen_connect#4](https://github.com/s1mptom/ugreen_connect/issues/4)
+
 # [0.19.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.18.0...v0.19.0) (2026-09-09)
 
 
