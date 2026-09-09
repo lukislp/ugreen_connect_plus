@@ -13,13 +13,13 @@ import binascii
 import io
 import logging
 import time
-from typing import Any
 
 import voluptuous as vol
 from homeassistant.const import CONF_DEVICE_ID
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
 
 from .const import DOMAIN, WALLPAPER_SIZE
 from .coordinator import device_key
@@ -56,7 +56,7 @@ def _to_wallpaper(raw: bytes) -> bytes:
     ratio, so the picture is scaled to cover and the centre kept.
     """
     try:
-        from PIL import Image  # noqa: PLC0415 - optional, only needed here
+        from PIL import Image
     except ImportError as err:  # pragma: no cover
         raise HomeAssistantError("Pillow is required to resize the picture") from err
 
@@ -184,7 +184,7 @@ def _read(path: str) -> bytes:
 
 
 async def _fetch(hass: HomeAssistant, url: str) -> bytes:
-    from homeassistant.helpers.aiohttp_client import (  # noqa: PLC0415
+    from homeassistant.helpers.aiohttp_client import (
         async_get_clientsession,
     )
 

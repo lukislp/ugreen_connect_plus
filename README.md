@@ -106,6 +106,19 @@ open, and there is no mDNS or SSDP. Its only outbound path is its own cloud.
 Local control exists solely over BLE. So a cloud integration is the only way to
 get readings into Home Assistant without a Bluetooth proxy next to the device.
 
+## Coming from the original
+
+Remove `ugreen_connect` before adding this one. Both can run side by side --
+that is what the separate domain is for -- but Home Assistant hands out entity
+ids first come, first served, so with the original still installed everything
+here arrives as `..._power_2` and stays that way. Removing it afterwards does
+not undo the suffix.
+
+The history does not carry across either way: entity ids are the same, but
+`unique_id` includes the domain, so Home Assistant treats these as new
+entities. There is no migration for that, and pretending otherwise would only
+be a way of losing the old data twice.
+
 ## Install
 
 **HACS** → three-dot menu → *Custom repositories* → add `lukislp/ugreen_connect_plus_plus`
@@ -382,6 +395,54 @@ The dashboard card keeps its own text in one table at the top of
 `www/ugreen-plus-wallpaper-card.js`: copy the `en` block, key it by language code,
 and translate. Missing keys fall back to English, so a partial translation is
 fine.
+
+## Things worth automating
+
+**Say what a charge came to.** The event carries the figures, so nothing has
+to be read back:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: event.ugreen_nexode_pro_x783_c3_charging
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.attributes.event_type == 'ended' }}"
+actions:
+  - action: notify.persistent_notification
+    data:
+      message: >-
+        C3 delivered {{ trigger.to_state.attributes.energy_wh }} Wh in
+        {{ (trigger.to_state.attributes.duration / 60) | round }} minutes
+        over {{ trigger.to_state.attributes.protocol }}.
+```
+
+**Put it on the Energy dashboard.** *Settings → Dashboards → Energy →
+Individual devices*, and add either the charger's own total or the per-port
+counters -- one or the other, since together they count every watt-hour
+twice.
+
+**Notice when the readings stop being current.** The cloud goes quiet for
+minutes at a time; this says when it has been longer than that:
+
+```yaml
+triggers:
+  - trigger: template
+    value_template: >-
+      {{ (now() - states('sensor.ugreen_nexode_pro_x783_last_successful_poll')
+          | as_datetime).total_seconds() > 900 }}
+```
+
+**Something that reacts to charging itself** takes the flag rather than a
+wattage, which on this charger cannot tell a full battery from a bare cable:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.ugreen_nexode_pro_x783_c3_charging
+    to: "off"
+    for: "00:05:00"
+```
 
 ## Limitations
 

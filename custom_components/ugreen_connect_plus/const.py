@@ -8,7 +8,7 @@ DOMAIN: Final = "ugreen_connect_plus"
 
 # The wire format's own tables live with the codec that reads them; they are
 # re-exported here so that nothing else has to know where the line was drawn.
-from .protocol import (  # noqa: E402
+from .protocol import (  # noqa: E402,F401  -- re-exported for the rest of the integration
     CUSTOM_PORTS,
     CUSTOM_PROTOCOLS,
     CUSTOM_SHARED_STEP,
@@ -87,11 +87,18 @@ APP_INFO_PLATFORM: Final = "rtcx"
 GATEWAY_OK: Final = 200
 # iotTokens last 24 h; renew this far ahead of expiry.
 RTCX_TOKEN_MARGIN: Final = 300
-# The charger answers a PT_data query asynchronously -- give it time to land
-# before reading the property back.
-POWER_SETTLE_SECONDS: Final = 2.0
-# ...and how many times to look before giving up on that reply.
-POWER_POLL_ATTEMPTS: Final = 3
+# The charger answers a PT_data query asynchronously, so the reply has to be
+# waited for -- and each look is a request of its own, which is why this is a
+# short wait that grows rather than a fast poll. A charger that answers
+# quickly is not made to wait two seconds for the privilege; one that is slow
+# costs no more requests than it used to.
+PT_DATA_WAITS: Final[tuple[float, ...]] = (0.8, 1.5, 2.5)
+
+# The screen settings only change when someone opens the app, and asking for
+# them costs a round trip of its own. Read on a timer instead of beside every
+# wattage; a setting written from here marks them stale at once, so nobody
+# waits this out to see their own change.
+DEVICE_STATE_INTERVAL: Final = 60
 # PT_data keeps its last value indefinitely, so anything older than this is
 # treated as "no reading" rather than as a live one.
 PT_DATA_MAX_AGE: Final = 300

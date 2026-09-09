@@ -7,6 +7,8 @@ from typing import Any
 from homeassistant.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
+)
+from homeassistant.helpers.device_registry import (
     async_get as async_get_device_registry,
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity

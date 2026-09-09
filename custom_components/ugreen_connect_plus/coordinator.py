@@ -16,22 +16,26 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api import UgreenApi, UgreenAuthError, UgreenError
 from .const import (
+    CONF_IDLE_END,
     DEBUG_DUMP_FILE,
+    DEFAULT_IDLE_END,
+    DEFAULT_SCAN_INTERVAL,
+    DEVICE_STATE_INTERVAL,
+    DOMAIN,
     IDLE_SCAN_FACTOR,
     IDLE_SCAN_MAX,
-    DEFAULT_SCAN_INTERVAL,
-    DOMAIN,
     MIN_POLL_GAP,
-    CONF_IDLE_END,
-    DEFAULT_IDLE_END,
     SESSION_GAP_FACTOR,
     SMART_MODE_INTERVAL,
     STATIC_INFO_INTERVAL,
     WALLPAPER_LIST_INTERVAL,
     WALLPAPER_MISS_INTERVAL,
 )
-from .protocol import PORTS_BY_MODEL, STATE_VERIFIED
-from .rtcx import QUERY_GET_WIFI_SSID, RtcxClient
+
+# Straight from the protocol module rather than through rtcx: a name
+# re-exported by a module that does not use it is one a linter will remove.
+from .protocol import PORTS_BY_MODEL, QUERY_GET_WIFI_SSID, STATE_VERIFIED
+from .rtcx import RtcxClient
 from .session import MAX_GAP, SessionTracker
 
 _LOGGER = logging.getLogger(__name__)
@@ -89,6 +93,7 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Chargers already told about, so the notice is written once rather
         # than on every poll.
         self._noted: set[str] = set()
+        self._state: dict[str, tuple[dict[str, Any], float]] = {}
 
     async def _async_update_data(self) -> dict[str, Any]:
         started = time.monotonic()
@@ -165,9 +170,7 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if power[key] is None:
                     errors[key] = "device returned no usable PT_data frame"
                 else:
-                    power[key].update(
-                        await self.rtcx.async_device_state(iot_id, model) or {}
-                    )
+                    power[key].update(await self._device_state(key, iot_id, model))
                     power[key].update(await self._static_info(key, iot_id))
                     power[key]["ota"] = self.rtcx.ota_state()
                     power[key]["custom_name"] = await self._custom_mode_name(
@@ -216,6 +219,33 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self.hass.async_add_executor_job(self._write_dump, data)
 
         return data
+
+    async def _device_state(
+        self, key: str, iot_id: str, model: str | None
+    ) -> dict[str, Any]:
+        """The screen settings and the custom mode, on their own slow timer.
+
+        They only change when someone opens the app, and asking costs a round
+        trip of its own -- so asking beside every wattage doubles the traffic
+        for an answer that is the same one poll after poll. Reading them once
+        a minute halves it.
+
+        Except when this has just written to the charger: then the copy is
+        known to be out of date, and waiting out the timer would mean watching
+        one's own change take a minute to appear.
+        """
+        cached, fetched_at = self._state.get(key, ({}, 0.0))
+        recent = cached and time.time() - fetched_at < DEVICE_STATE_INTERVAL
+        if recent and not self.rtcx.state_is_stale(iot_id):
+            return cached
+        state = await self.rtcx.async_device_state(iot_id, model)
+        if state is None:
+            # A reply that did not arrive says nothing about what the settings
+            # are; the last ones that did are still the best answer.
+            return cached
+        self.rtcx.state_was_read(iot_id)
+        self._state[key] = (state, time.time())
+        return state
 
     async def _static_info(self, key: str, iot_id: str) -> dict[str, Any]:
         """Firmware version and SSID -- cached, since each costs a round trip to
@@ -391,7 +421,7 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.info("Wrote raw UGREEN cloud snapshot to %s", path)
 
 
-def device_ports(coordinator: "UgreenCoordinator", key: str) -> tuple[str, ...]:
+def device_ports(coordinator: UgreenCoordinator, key: str) -> tuple[str, ...]:
     """The ports this charger's own report carries, in the order it sends them.
 
     Taken from the reading rather than from a table, so a model nobody here

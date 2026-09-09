@@ -76,5 +76,5 @@ async def _register_resource(hass: HomeAssistant, url: str) -> None:
             return  # YAML mode: read-only
         await resources.async_create_item({"res_type": "module", "url": url})
         _LOGGER.debug("Registered Lovelace resource %s", url)
-    except Exception as err:  # noqa: BLE001 - never let this break setup
+    except Exception as err:
         _LOGGER.warning("Could not register Lovelace resource %s: %s", url, err)

@@ -21,4 +21,10 @@ async def async_get_config_entry_diagnostics(
     return {
         "entry": async_redact_data(dict(entry.data), TO_REDACT),
         "data": async_redact_data(coordinator.data or {}, TO_REDACT),
+        # The raw frames behind the readings above, keyed by the question that
+        # was asked. On a charger this integration has never seen, the decoded
+        # values are only as good as offsets established on a different one --
+        # these bytes are what someone else can check them against, and what
+        # turns "my ports are called P1" into a model in the table.
+        "frames": coordinator.rtcx.last_frames,
     }

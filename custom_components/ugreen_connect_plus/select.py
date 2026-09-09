@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-
 from typing import Any
 
 from homeassistant.components.select import SelectEntity
@@ -14,8 +13,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import UgreenConfigEntry
 from .const import (
     CHARGING_MODES,
-    DOMAIN,
     CLOCK_STYLES,
+    DOMAIN,
     PICTURE_SETTLE_SECONDS,
     SELECTABLE_MODES,
     SLEEP_OPTIONS,

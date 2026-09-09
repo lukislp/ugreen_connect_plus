@@ -1,7 +1,6 @@
 """Charging-session tracking: what starts a session, what ends it, what it accumulates."""
 
 import pytest
-
 from conftest import session as session_module
 
 SessionTracker = session_module.SessionTracker
