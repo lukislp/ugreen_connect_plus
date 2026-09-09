@@ -22,15 +22,26 @@
         "data": {
           "password": "Passwort"
         }
+      },
+      "reconfigure": {
+        "title": "UGREEN Connect Plus",
+        "description": "Konto oder Region ändern, über die dieses Ladegerät erreicht wird. Es muss dasselbe Konto bleiben — ein anderes bedeutet andere Ladegeräte, und diese Entitäten gehören zu diesem hier.",
+        "data": {
+          "email": "E-Mail",
+          "password": "Passwort",
+          "region": "Region"
+        }
       }
     },
     "error": {
       "cannot_connect": "Die UGREEN-Cloud war nicht erreichbar.",
-      "invalid_auth": "Konto oder Passwort wurde abgelehnt."
+      "invalid_auth": "Konto oder Passwort wurde abgelehnt.",
+      "wrong_account": "Das ist ein anderes Konto als das eingerichtete. Füge es als eigene Integration hinzu, statt diese umzustellen."
     },
     "abort": {
       "already_configured": "Dieses Konto ist bereits eingerichtet.",
-      "reauth_successful": "Die erneute Anmeldung war erfolgreich."
+      "reauth_successful": "Die erneute Anmeldung war erfolgreich.",
+      "reconfigure_successful": "Gespeichert."
     }
   },
   "selector": {
@@ -265,6 +276,12 @@
   "exceptions": {
     "mode_not_selectable": {
       "message": "{mode} lässt sich nicht aus Home Assistant setzen. Der Modus braucht die Parameter, die nur der Modus-Editor der UgreenConnect-App füllt, und erfundene Werte würden überschreiben, was dort konfiguriert ist."
+    }
+  },
+  "issues": {
+    "readings_stale": {
+      "title": "Vom Ladegerät kommen keine Werte mehr an",
+      "description": "Seit {minutes} Minuten kam nichts Vollständiges mehr aus UGREENs Cloud, alle angezeigten Werte sind also mindestens so alt. Kurze Aussetzer sind hier normal und vergehen von selbst; so lange heißt meist, dass das Konto anderswo angemeldet wurde oder das Ladegerät nicht im Netz ist."
     }
   }
 }

@@ -77,6 +77,23 @@ STEP_USER_SCHEMA = vol.Schema(
 )
 
 
+# Only what a reconfigure is for: the connection. The tuning lives in the
+# options and the layout was settled at setup, and dragging either through
+# here would invite changing them by accident.
+RECONFIGURE_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_EMAIL): EMAIL_SELECTOR,
+        vol.Required(CONF_PASSWORD): PASSWORD_SELECTOR,
+        vol.Required(CONF_REGION, default=DEFAULT_REGION): SelectSelector(
+            SelectSelectorConfig(
+                options=list(REGIONS),
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key="region",
+            )
+        ),
+    }
+)
+
 OPTIONS_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): NumberSelector(
@@ -173,6 +190,57 @@ class UgreenConnectConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_SCHEMA, errors=errors
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change the account or the region without starting over.
+
+        Removing the integration and adding it again does the same job and
+        takes every entity's history with it, which is a steep price for a
+        changed password.
+        """
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            email = user_input[CONF_EMAIL].strip()
+            region = user_input[CONF_REGION]
+            session = async_get_clientsession(self.hass)
+            api = UgreenApi(session, REGIONS[region], DEFAULT_LANGUAGE)
+            try:
+                await api.login(email, user_input[CONF_PASSWORD])
+            except UgreenAuthError:
+                errors["base"] = "invalid_auth"
+            except UgreenError as err:
+                _LOGGER.debug("Cannot connect to UGREEN cloud: %s", err)
+                errors["base"] = "cannot_connect"
+            else:
+                if email.lower() != entry.unique_id:
+                    # A different account is a different set of chargers, and
+                    # the entities here belong to this one. That is an add,
+                    # not a reconfigure.
+                    errors["base"] = "wrong_account"
+                else:
+                    return self.async_update_reload_and_abort(
+                        entry,
+                        data_updates={
+                            CONF_EMAIL: email,
+                            CONF_PASSWORD: user_input[CONF_PASSWORD],
+                            CONF_REGION: region,
+                        },
+                    )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(
+                RECONFIGURE_SCHEMA,
+                {
+                    CONF_EMAIL: entry.data.get(CONF_EMAIL),
+                    CONF_REGION: entry.data.get(CONF_REGION, DEFAULT_REGION),
+                },
+            ),
+            errors=errors,
         )
 
     async def async_step_reauth(
