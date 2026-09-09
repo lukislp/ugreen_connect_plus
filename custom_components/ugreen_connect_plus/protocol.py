@@ -25,7 +25,66 @@ _LOGGER = logging.getLogger(__name__)
 # Port order of the power report on the Nexode Pro 300W, from the app's own port
 # table. X783 is what the app calls that model internally, and is kept here
 # because a second model would need its own list beside this one.
-X783_PORTS: Final[tuple[str, ...]] = ("C1", "C2", "C3", "C4", "C5", "C6", "A1", "DC")
+# The order the power report puts its ports in, per model. `productNo` is what
+# the account API calls the model, and it is fetched already for the device
+# page, so knowing which list to use costs nothing extra.
+PORTS_BY_MODEL: Final[dict[str, tuple[str, ...]]] = {
+    # Read off the app's own port table, and confirmed against a charger.
+    "X783": ("C1", "C2", "C3", "C4", "C5", "C6", "A1", "DC"),
+    # Reported for the Nexode Pro 160W, never checked against one -- nobody
+    # here has the hardware. Names that may be wrong on a model we cannot put
+    # on a desk still beat P1..P4, and are easier to correct than to discover.
+    "X776": ("C-Cable", "C1", "C2", "A"),
+}
+
+# The name the rest of the integration knew this list by.
+X783_PORTS: Final[tuple[str, ...]] = PORTS_BY_MODEL["X783"]
+
+# Models whose GET_DEVICE_STATE reply has been read on real hardware.
+#
+# Deliberately not the same list as the one above, and the difference is the
+# point. How many ports a report describes can be counted from its length, so
+# readings work anywhere. Where brightness, the screen timeout, the charging
+# mode and the screensaver sit in the state reply cannot be counted -- they are
+# offsets, established by writing a value through the app and watching which
+# byte moved. On a model whose reply is laid out differently they would read
+# something plausible and wrong, and these are the entities that write back.
+#
+# So a model here gets its screen; a model that is merely named above gets its
+# readings. X776's port names came from its owner's report, which says nothing
+# about where its screen settings live -- or whether it has a screen at all.
+STATE_VERIFIED: Final[frozenset[str]] = frozenset({"X783"})
+
+
+def state_is_readable(model: str | None) -> bool:
+    """Whether this model's state reply can be trusted to mean what it says.
+
+    An unknown model -- ``None``, because the account API did not answer with
+    one -- is read as before rather than refused: on the charger this was
+    written for, a failed product lookup should not take the screen away.
+    Refusal needs positive evidence that the charger is a different one.
+    """
+    return model is None or model in STATE_VERIFIED
+
+
+def ports_for(model: str | None, body_length: int) -> tuple[str, ...]:
+    """What to call each port of a report this long, on this model.
+
+    An unknown model still gets its readings: seven bytes of measurement and
+    up to one protocol byte per port means the report's own length says how
+    many there are. Only the names are lost, and numbered ports are honest
+    about that -- better than one model's labels on another model's sockets.
+
+    "Up to" matters. The X783 sends 63 bytes for eight ports: 56 of
+    measurement and only seven protocol bytes, the last one simply absent. So
+    the count is taken as high as the protocol block allows and no higher than
+    the measurements can fill.
+    """
+    if known := PORTS_BY_MODEL.get(model or ""):
+        return known
+    by_protocol = -(-body_length // (PORT_RECORD + 1))   # aufgerundet
+    by_measurement = body_length // PORT_RECORD
+    return tuple(f"P{index + 1}" for index in range(min(by_protocol, by_measurement)))
 # The charging protocol each port negotiated, reported one byte per port at the
 # tail of the power frame.
 HANDSHAKE_PROTOCOL: Final[dict[int, str]] = {
@@ -142,7 +201,9 @@ def frame_body(value: str, frame_type: int, cmd: int) -> bytes | None:
     return body
 
 
-def parse_power_frame(value: str) -> dict[str, dict[str, Any]] | None:
+def parse_power_frame(
+    value: str, model: str | None = None
+) -> dict[str, dict[str, Any]] | None:
     """Decode a ``GET_POWER_INFO`` reply into ``{port_name: {volt, amp, watt}}``.
 
     Returns None for anything else -- the property also holds replies to other
@@ -151,19 +212,21 @@ def parse_power_frame(value: str) -> dict[str, dict[str, Any]] | None:
     body = frame_body(value, FRAME_QUERY, QUERY_GET_POWER_INFO)
     if body is None:
         return None
-    if len(body) < POWER_BODY_MIN:
-        _LOGGER.debug("power body too short: %d < %d", len(body), POWER_BODY_MIN)
+    ports_named = ports_for(model, len(body))
+    measured = PORT_RECORD * len(ports_named)
+    if not ports_named or len(body) < measured:
+        _LOGGER.debug("power body too short: %d for %d ports", len(body), len(ports_named))
         return None
 
     def u16(offset: int) -> int:
         return int.from_bytes(body[offset : offset + 2], "big")
 
     ports: dict[str, dict[str, Any]] = {}
-    for index, name in enumerate(X783_PORTS):
+    for index, name in enumerate(ports_named):
         base = PORT_RECORD * index
         # The protocol byte block follows the port records; a port that has
         # nothing attached reports 0 ("none").
-        proto_at = POWER_BODY_MIN + index
+        proto_at = measured + index
         ports[name] = {
             "voltage": u16(base) / 10,
             "current": u16(base + 2) / 10,
@@ -175,7 +238,9 @@ def parse_power_frame(value: str) -> dict[str, dict[str, Any]] | None:
     return ports
 
 
-def parse_custom_mode(body: bytes) -> list[dict[str, Any]] | None:
+def parse_custom_mode(
+    body: bytes, model: str | None = None
+) -> list[dict[str, Any]] | None:
     """Decode the parameter block only the custom charging mode fills in.
 
     Layout, established against the app's editor on a live charger by changing
@@ -189,6 +254,12 @@ def parse_custom_mode(body: bytes) -> list[dict[str, Any]] | None:
     watching it go -- which is how "no custom mode configured" is told apart
     from a configured one that merely happens to be idle.
     """
+    if not state_is_readable(model):
+        # Five plain wattages, a shared pair counted in steps, then a mask
+        # each: that shape is the X783's, and another model's ports do not
+        # divide the same way. Guessing would put numbers on a page that mean
+        # nothing, which is worse than showing none.
+        return None
     if len(body) < STATE_CUSTOM_END:
         return None
     if not any(body[STATE_CUSTOM:STATE_CUSTOM_END]):

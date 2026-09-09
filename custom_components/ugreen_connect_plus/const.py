@@ -13,7 +13,6 @@ from .protocol import (  # noqa: E402
     CUSTOM_PROTOCOLS,
     CUSTOM_SHARED_STEP,
     HANDSHAKE_PROTOCOL,
-    X783_PORTS,
 )
 
 CONF_REGION: Final = "region"

@@ -41,6 +41,7 @@ import aiohttp
 from .api import UgreenApi, UgreenAuthError, UgreenError
 from .protocol import (
     CHARGING_MODE_PARAMS,
+    state_is_readable,
     FRAME_QUERY,
     FRAME_SETTING,
     IMAGE_ID_LEN,
@@ -77,7 +78,6 @@ from .const import (
     POWER_SETTLE_SECONDS,
     PT_DATA_MAX_AGE,
     RTCX_TOKEN_MARGIN,
-    X783_PORTS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -323,12 +323,21 @@ class RtcxClient:
         body = frame_body(value, FRAME_QUERY, QUERY_GET_PRODUCT_VERSION) if value else None
         return ".".join(str(b) for b in body) if body else None
 
-    async def async_device_state(self, iot_id: str) -> dict[str, Any] | None:
+    async def async_device_state(
+        self, iot_id: str, model: str | None = None
+    ) -> dict[str, Any] | None:
         """Everything the screen settings need, in one round trip.
 
         Byte offsets were established by writing a distinctive value and reading
         it back on a real charger, not by guessing.
         """
+        if not state_is_readable(model):
+            # The screen settings are offsets rather than a countable layout,
+            # and they are written back as well as read. On a charger whose
+            # reply has never been seen, none of them appears at all -- which
+            # is what leaves its readings working and its screen alone.
+            _LOGGER.debug("state reply not read on model %s", model)
+            return None
         value = await self._ask(iot_id, FRAME_QUERY, QUERY_GET_DEVICE_STATE)
         body = frame_body(value, FRAME_QUERY, QUERY_GET_DEVICE_STATE) if value else None
         if not body or len(body) <= STATE_WALLPAPER_COUNT:
@@ -348,7 +357,7 @@ class RtcxClient:
             "brightness": body[STATE_BRIGHTNESS],
             "sleep_time": body[STATE_SLEEP_TIME],
             "charging_mode": CHARGING_MODES.get(body[STATE_CHARGING_MODE]),
-            "custom": parse_custom_mode(body),
+            "custom": parse_custom_mode(body, model),
             "screensaver": bool(body[STATE_SCREENSAVER]),
             "screensaver_theme": body[STATE_SCREENSAVER + 1],
             "screensaver_flag": body[STATE_SCREENSAVER + 2],
@@ -419,14 +428,16 @@ class RtcxClient:
             iot_id, SETTING_SET_SCREENSAVER, bytes([1 if enabled else 0, theme, flag]) + image
         )
 
-    async def async_power(self, iot_id: str) -> dict[str, Any] | None:
+    async def async_power(
+        self, iot_id: str, model: str | None = None
+    ) -> dict[str, Any] | None:
         """Ask the charger for a power report and read the answer back.
 
         The device replies asynchronously: the write only queues the query, and
         the reply shows up as the property's new value a moment later.
         """
         value = await self._ask(iot_id, FRAME_QUERY, QUERY_GET_POWER_INFO)
-        ports = parse_power_frame(value) if value else None
+        ports = parse_power_frame(value, model) if value else None
         if ports is None:
             return None
         return {

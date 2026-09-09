@@ -81,7 +81,7 @@ def test_a_built_frame_carries_its_own_valid_checksum():
 # --- the readings ---------------------------------------------------------
 
 def test_power_frame_reads_the_port_that_is_charging():
-    ports = p.parse_power_frame(POWER)
+    ports = p.parse_power_frame(POWER, "X783")
     assert ports is not None
     assert ports["C3"] == {
         "voltage": 27.9, "current": 0.9, "power": 25.1, "protocol": "PD",
@@ -93,32 +93,32 @@ def test_the_readings_of_a_port_agree_with_each_other():
     # rather than on arithmetic: read voltage or current from the wrong two
     # bytes and the three stop multiplying out.
     for frame in (POWER, POWER_LATER):
-        c3 = p.parse_power_frame(frame)["C3"]
+        c3 = p.parse_power_frame(frame, "X783")["C3"]
         assert abs(c3["voltage"] * c3["current"] - c3["power"]) < 1.0
 
 
 def test_power_frame_reads_a_live_port_with_nothing_drawing():
     # A cable with nothing on it: the port is held at 5.1 V and delivers
     # nothing, which is exactly what a full battery looks like too.
-    ports = p.parse_power_frame(POWER)
+    ports = p.parse_power_frame(POWER, "X783")
     assert ports["C1"]["voltage"] == 5.1
     assert ports["C1"]["current"] == 0.0
     assert ports["C1"]["protocol"] == "none"
 
 
 def test_power_frame_covers_every_port():
-    ports = p.parse_power_frame(POWER)
-    assert list(ports) == list(p.X783_PORTS)
+    ports = p.parse_power_frame(POWER, "X783")
+    assert list(ports) == list(p.PORTS_BY_MODEL["X783"])
 
 
 def test_power_frame_follows_the_charger_between_readings():
-    first = p.parse_power_frame(POWER)["C3"]["power"]
-    later = p.parse_power_frame(POWER_LATER)["C3"]["power"]
+    first = p.parse_power_frame(POWER, "X783")["C3"]["power"]
+    later = p.parse_power_frame(POWER_LATER, "X783")["C3"]["power"]
     assert later > first
 
 
 def test_a_state_frame_is_not_read_as_a_power_frame():
-    assert p.parse_power_frame(STATE_CUSTOM) is None
+    assert p.parse_power_frame(STATE_CUSTOM, "X783") is None
 
 
 # --- the custom mode ------------------------------------------------------
@@ -176,3 +176,51 @@ def test_a_preset_reads_as_no_custom_mode_at_all():
 
 def test_a_body_too_short_to_hold_the_block_is_refused():
     assert p.parse_custom_mode(b"\x00" * 10) is None
+
+
+# --- models other than the one on the desk --------------------------------
+
+def test_a_known_model_is_named_from_its_own_table():
+    assert p.ports_for("X776", 32) == ("C-Cable", "C1", "C2", "A")
+
+
+def test_an_unknown_model_still_gets_a_port_each():
+    # The X783's own report: 63 bytes for eight ports, the eighth protocol
+    # byte simply absent. Counting has to survive that.
+    assert len(p.ports_for("X999", 63)) == 8
+    assert len(p.ports_for(None, 32)) == 4
+    assert p.ports_for("X999", 32) == ("P1", "P2", "P3", "P4")
+
+
+def test_an_unknown_model_is_read_rather_than_refused():
+    ports = p.parse_power_frame(POWER)          # no model given
+    assert ports is not None
+    assert len(ports) == 8
+    # The readings are the same; only the names are lost.
+    assert ports["P3"] == p.parse_power_frame(POWER, "X783")["C3"]
+
+
+def test_the_custom_mode_is_not_guessed_at_on_another_model():
+    # Five plain wattages, a shared pair in steps, a mask each: that shape is
+    # the X783's, and numbers under another model's ports would mean nothing.
+    body = p.frame_body(STATE_CUSTOM, p.FRAME_QUERY, p.QUERY_GET_DEVICE_STATE)
+    assert p.parse_custom_mode(body, "X783") is not None
+    assert p.parse_custom_mode(body, "X776") is None
+
+
+def test_the_state_reply_is_only_read_where_it_has_been_seen():
+    # Counting ports from a report's length is safe anywhere. Where brightness
+    # or the screensaver sit in the state reply is an offset, established on
+    # one charger, and those entities write back -- so a model that is merely
+    # named is not the same as one that has been read.
+    assert p.state_is_readable("X783")
+    assert not p.state_is_readable("X776")   # named above, never read
+    assert not p.state_is_readable("X999")
+    # No answer from the account API is not evidence of a different charger,
+    # and taking the screen away on a failed lookup would be its own fault.
+    assert p.state_is_readable(None)
+
+
+def test_a_model_can_be_named_without_its_screen_being_understood():
+    assert "X776" in p.PORTS_BY_MODEL
+    assert "X776" not in p.STATE_VERIFIED

@@ -18,8 +18,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import UgreenConfigEntry
-from .const import X783_PORTS
-from .coordinator import UgreenCoordinator, device_key
+from .coordinator import UgreenCoordinator, device_key, device_ports
 from .entity import UgreenPortEntity
 from .session import Session
 
@@ -39,7 +38,7 @@ async def async_setup_entry(
             key = device_key(device)
             if key is None or not (coordinator.data.get("power") or {}).get(key):
                 continue
-            for port in X783_PORTS:
+            for port in device_ports(coordinator, key):
                 if (key, port) in known:
                     continue
                 known.add((key, port))

@@ -21,9 +21,8 @@ from .const import (
     DEFAULT_REGION,
     DOMAIN,
     REGIONS,
-    X783_PORTS,
 )
-from .coordinator import UgreenCoordinator, device_key
+from .coordinator import UgreenCoordinator, device_key, device_ports
 from .rtcx import RtcxClient
 from .frontend import async_register_card
 from .image_proxy import async_register_view
@@ -111,7 +110,11 @@ def _prune_devices(hass: HomeAssistant, entry: UgreenConfigEntry) -> None:
 
     wanted = {(DOMAIN, key) for key in keys}
     if entry.options.get(CONF_PORT_DEVICES, DEFAULT_PORT_DEVICES):
-        wanted |= {(DOMAIN, f"{key}_{port}") for key in keys for port in X783_PORTS}
+        wanted |= {
+            (DOMAIN, f"{key}_{port}")
+            for key in keys
+            for port in device_ports(entry.runtime_data, key)
+        }
 
     registry = dr.async_get(hass)
     for device in dr.async_entries_for_config_entry(registry, entry.entry_id):

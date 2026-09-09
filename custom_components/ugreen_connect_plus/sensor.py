@@ -38,23 +38,17 @@ from .const import (
     CUSTOM_SHARED_MEMBERS,
     DOMAIN,
     HANDSHAKE_PROTOCOL,
-    X783_PORTS,
 )
-from .coordinator import UgreenCoordinator, device_key
+from .coordinator import UgreenCoordinator, device_key, device_ports
 from .entity import ONLINE, UgreenDeviceEntity, UgreenPortEntity
 from .session import Session, charge_mah
 
-# The report always carries all eight slots.
+# What each port reports, and how to show it.
 MEASUREMENTS: dict[str, tuple[SensorDeviceClass, str, int]] = {
     "power": (SensorDeviceClass.POWER, UnitOfPower.WATT, 1),
     "voltage": (SensorDeviceClass.VOLTAGE, UnitOfElectricPotential.VOLT, 1),
     "current": (SensorDeviceClass.CURRENT, UnitOfElectricCurrent.AMPERE, 1),
 }
-
-# Every port the report carries gets entities, DC included: which sockets a
-# given model actually has is not something this can know, and a port nobody
-# uses simply reads zero.
-ALWAYS_PORTS: tuple[str, ...] = X783_PORTS
 
 
 async def async_setup_entry(
@@ -66,18 +60,6 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     known: set[str] = set()
     known_ports: set[tuple[str, str]] = set()
-
-    # A port only reveals itself by drawing power, but once it has, its entities
-    # should stay put -- otherwise unplugging a cable makes them vanish on the
-    # next restart, taking their history with them. The registry remembers.
-    registry = er.async_get(hass)
-    seen_before = {
-        (key, port)
-        for key in {device_key(d) for d in coordinator.data.get("devices", [])}
-        if key
-        for port in X783_PORTS
-        if registry.async_get_entity_id("sensor", DOMAIN, f"{key}_{port}_power")
-    }
 
     @callback
     def _add_new_devices() -> None:
@@ -116,18 +98,12 @@ async def async_setup_entry(
                                                 shared_with=other)
                         for socket, other in CUSTOM_SHARED_MEMBERS.items()
                     )
-            # Every real port of the device gets its entities up front, so the
-            # dashboard shows the full layout from the start rather than waiting
-            # for a port to happen to be drawing power during a poll. DC is the
-            # exception: it only matters when something is actually plugged in.
-            for port in X783_PORTS:
-                values = reading["ports"].get(port) or {}
-                live = any(v for k, v in values.items() if k in MEASUREMENTS)
-                always = port in ALWAYS_PORTS
-                if (
-                    (not live and not always and (key, port) not in seen_before)
-                    or (key, port) in known_ports
-                ):
+            # Every port the charger reports gets its entities at once, so the
+            # dashboard shows the whole layout from the start instead of
+            # waiting for each socket to happen to draw during a poll. Which
+            # sockets a model has is the report's to say, not this file's.
+            for port in device_ports(coordinator, key):
+                if (key, port) in known_ports:
                     continue
                 known_ports.add((key, port))
                 new.extend(
