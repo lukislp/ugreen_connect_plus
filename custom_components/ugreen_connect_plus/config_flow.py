@@ -65,6 +65,11 @@ STEP_USER_SCHEMA = vol.Schema(
                 translation_key="region",
             )
         ),
+        # Asked here rather than left to the options because it decides how the
+        # devices are laid out in the first place: changing it later works, but
+        # it moves every entity between devices and leaves whatever pointed at
+        # the old ones to be set up again.
+        vol.Required(CONF_PORT_DEVICES, default=DEFAULT_PORT_DEVICES): bool,
         # Off by default: it writes the raw cloud payload, device ids included,
         # next to configuration.yaml on every refresh.
         vol.Required(CONF_DEBUG_DUMP, default=False): bool,
@@ -157,6 +162,12 @@ class UgreenConnectConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_PASSWORD: user_input[CONF_PASSWORD],
                         CONF_REGION: region,
                         CONF_DEBUG_DUMP: user_input[CONF_DEBUG_DUMP],
+                    },
+                    # Kept, not merely asked for: a form that collects a
+                    # setting and drops it is the fault this dialog has just
+                    # been rid of.
+                    options={
+                        CONF_PORT_DEVICES: bool(user_input[CONF_PORT_DEVICES]),
                     },
                 )
 
