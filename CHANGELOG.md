@@ -1,3 +1,10 @@
+# [0.20.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.19.1...v0.20.0) (2026-09-09)
+
+
+### Features
+
+* decide the device layout during setup ([cbbc7c6](https://github.com/lukislp/ugreen_connect_plus/commit/cbbc7c6454744d97f215e06c6d3661296a632344))
+
 ## [0.19.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.19.0...v0.19.1) (2026-09-09)
 
 
