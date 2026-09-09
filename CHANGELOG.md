@@ -1,3 +1,12 @@
+## [0.23.2](https://github.com/lukislp/ugreen_connect_plus/compare/v0.23.1...v0.23.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* back off when the cloud says it is being asked too often ([e01443d](https://github.com/lukislp/ugreen_connect_plus/commit/e01443d5c342255c9387bbaa50305314818603d2))
+* carry the last reading across a reply that goes missing ([f72eeab](https://github.com/lukislp/ugreen_connect_plus/commit/f72eeabfec240bbca0184a597c91930c79b74a1d))
+* show a cloud failure to the person who caused it ([c364f78](https://github.com/lukislp/ugreen_connect_plus/commit/c364f789083c274f64ed3d5660835215a5af1827))
+
 ## [0.23.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.23.0...v0.23.1) (2026-09-09)
 
 
