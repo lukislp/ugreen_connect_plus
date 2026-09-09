@@ -1,6 +1,5 @@
 {
   "name": "UGREEN Connect Plus",
   "content_in_root": false,
-  "render_readme": true,
   "homeassistant": "2024.7.0"
 }
