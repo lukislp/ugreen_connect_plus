@@ -109,6 +109,21 @@ STALE_AFTER: Final = 3600
 # treated as "no reading" rather than as a live one.
 PT_DATA_MAX_AGE: Final = 300
 
+# How far a reading that did arrive may be carried when the next one does not.
+#
+# The charger answers into a single cloud property, so anything else asking at
+# the same moment -- a second Home Assistant, the phone app, the charger's own
+# app being opened -- can take the reply meant for this one. Watched happening:
+# with a second instance polling the same charger, every entity of it blinked
+# out and back roughly every ten seconds, while every poll reported success.
+#
+# Two misses in a row and a minute are both deliberately short. This is here to
+# cover the gap of a reply going astray, not to keep a wattage on screen for a
+# charger that has been unplugged -- past either bound, "unavailable" is the
+# honest answer again.
+RETAIN_MISSES: Final = 2
+RETAIN_SECONDS: Final = 60
+
 # The charger's screen, in pixels. Its stock pictures are stored rotated, but
 # what the app uploads is this way round.
 WALLPAPER_SIZE: Final[tuple[int, int]] = (560, 170)

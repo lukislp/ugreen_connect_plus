@@ -26,6 +26,8 @@ from .const import (
     IDLE_SCAN_FACTOR,
     IDLE_SCAN_MAX,
     MIN_POLL_GAP,
+    RETAIN_MISSES,
+    RETAIN_SECONDS,
     SESSION_GAP_FACTOR,
     SMART_MODE_INTERVAL,
     STALE_AFTER,
@@ -87,6 +89,10 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._debug_dump = debug_dump
         self._dumped = False
         self._power_errors: dict[str, str] = {}
+        # The last reading that arrived whole, per charger, and how many polls
+        # have come up empty since.
+        self._good: dict[str, tuple[dict[str, Any], float]] = {}
+        self._misses: dict[str, int] = {}
         self._static: dict[str, tuple[dict[str, Any], float]] = {}
         self._wallpaper_cache: dict[str, tuple[list[dict[str, Any]], float]] = {}
         self._wallpaper_missed: dict[str, float] = {}
@@ -172,6 +178,7 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 power[key] = await self.rtcx.async_power(iot_id, model)
                 if power[key] is None:
                     errors[key] = "device returned no usable PT_data frame"
+                    power[key] = self._carry(key)
                 else:
                     power[key].update(await self._device_state(key, iot_id, model))
                     power[key].update(await self._static_info(key, iot_id))
@@ -189,26 +196,36 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         device, key, await self._wallpapers(device),
                         power[key].get("wallpaper"),
                     )
+                    # Only a reading with everything in it is worth carrying
+                    # into a poll that comes back empty.
+                    self._good[key] = (power[key], time.time())
+                    self._misses[key] = 0
             except UgreenError as err:
                 # Warn rather than debug: without this the entities simply never
                 # appear, with nothing anywhere saying why.
                 if self._power_errors.get(key) != str(err):
                     _LOGGER.warning("Live power unavailable for %s: %s", key, err)
                 errors[key] = str(err)
-                power[key] = None
+                power[key] = self._carry(key)
         self._power_errors = errors
         # A poll that failed says nothing about whether anything is charging,
         # so an outage keeps the fast rate rather than quietly slowing down
-        # exactly when someone is watching for the charger to come back.
+        # exactly when someone is watching for the charger to come back. A
+        # carried reading is a failed poll wearing the last answer's clothes,
+        # and counts the same way.
         self._drawing = not power or any(
-            reading is None or reading.get("total") for reading in power.values()
+            reading is None or reading.get("carried_for") or reading.get("total")
+            for reading in power.values()
         )
 
         # Only readings that actually arrived are folded in: a failed poll has to
         # leave every session untouched, or an outage would read as an unplug.
         stamp = time.time()
         for key, reading in power.items():
-            if reading:
+            # A carried reading is the previous one shown again rather than a
+            # new measurement, so it must not be integrated: doing so would
+            # invent energy across exactly the gap where none was measured.
+            if reading and not reading.get("carried_for"):
                 self.sessions.update(stamp, key, reading["ports"])
 
         data = {
@@ -276,6 +293,32 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.rtcx.state_was_read(iot_id)
         self._state[key] = (state, time.time())
         return state
+
+    def _carry(self, key: str) -> dict[str, Any] | None:
+        """The last reading that did arrive, while it is still worth showing.
+
+        A reply going missing is ordinary rather than exceptional. The charger
+        answers into one cloud property, and anything else asking at the same
+        moment can take the answer meant for this poll -- a second Home
+        Assistant against the same charger made every entity of it blink out
+        and back every few seconds, while every poll reported success.
+
+        Blanking a charger for one cycle reads like the device fell off the
+        shelf, and none of what it says is any less true for being a few
+        seconds old. So the previous reading is shown again -- but marked, and
+        only across the gap: two misses or a minute, whichever comes first,
+        and then unavailable is the honest answer.
+        """
+        reading, arrived = self._good.get(key, (None, 0.0))
+        self._misses[key] = misses = self._misses.get(key, 0) + 1
+        age = time.time() - arrived
+        if reading is None or misses > RETAIN_MISSES or age > RETAIN_SECONDS:
+            return None
+        # Everything downstream tells a carried reading from a fresh one by
+        # this: the session tracker refuses to integrate it, the poll timer
+        # treats it as the failure it stands in for, and diagnostics say how
+        # old it is.
+        return reading | {"carried_for": round(age, 1)}
 
     async def async_read_back(self, key: str, iot_id: str) -> None:
         """Publish what the charger did with a write, not what it was asked.
