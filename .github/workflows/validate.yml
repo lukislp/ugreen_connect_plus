@@ -14,6 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # hassfest runs from an image on ghcr.io, and an anonymous pull is rate
+      # limited hard enough that this job passes or fails by the hour. The
+      # runner already holds a token that lifts the limit; it just has to be
+      # handed over.
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - uses: home-assistant/actions/hassfest@master
 
   hacs:
