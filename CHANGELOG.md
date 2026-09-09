@@ -1,3 +1,15 @@
+# [0.24.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.23.2...v0.24.0) (2026-09-09)
+
+
+### Bug Fixes
+
+* turn the wallpaper the way the screen shows it ([911e8c4](https://github.com/lukislp/ugreen_connect_plus/commit/911e8c4591f814281625274d213bfc3bcda41957))
+
+
+### Features
+
+* publish the picture the charger's screen is showing ([3582655](https://github.com/lukislp/ugreen_connect_plus/commit/35826558d7190b58bdcec9c427545e0582810fc0))
+
 ## [0.23.2](https://github.com/lukislp/ugreen_connect_plus/compare/v0.23.1...v0.23.2) (2026-09-09)
 
 
