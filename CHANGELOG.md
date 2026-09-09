@@ -1,3 +1,10 @@
+## [0.22.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.22.0...v0.22.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* keep the household out of the diagnostics download ([31ad3dd](https://github.com/lukislp/ugreen_connect_plus/commit/31ad3dd9f86ece458eae5b5327b11e6ba4e9bed6))
+
 # [0.22.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.21.1...v0.22.0) (2026-09-09)
 
 
