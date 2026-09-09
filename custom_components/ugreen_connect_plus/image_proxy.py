@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Any
 
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
@@ -50,6 +51,59 @@ def async_register_view(hass: HomeAssistant) -> None:
     hass.http.register_view(UgreenWallpaperView())
 
 
+class WallpaperUnavailable(Exception):
+    """The id is known, but the picture behind it could not be fetched."""
+
+
+# Shared by the view and the image entity, which ask for the same bytes and
+# would otherwise each keep their own copy of them.
+_CACHE: dict[str, tuple[bytes, str, float]] = {}
+
+
+async def async_wallpaper_bytes(
+    hass: HomeAssistant, coordinator: Any, image_id: str
+) -> tuple[bytes, str] | None:
+    """The picture behind an id, as bytes and content type.
+
+    None if no such picture is listed for the account. Raises
+    WallpaperUnavailable if it is listed and the CDN would not hand it over --
+    the difference matters to the view, which has a status code to choose.
+    """
+    now = time.time()
+    if (hit := _CACHE.get(image_id)) and now - hit[2] < CACHE_SECONDS:
+        return hit[0], hit[1]
+
+    # One retry with a freshly fetched link: a signature that has expired since
+    # the card was drawn is the ordinary case here, not an error.
+    for refresh in (False, True):
+        url = await coordinator.async_wallpaper_url(image_id, refresh=refresh)
+        if url is None:
+            if refresh:
+                return None
+            continue
+        try:
+            session = async_get_clientsession(hass)
+            async with session.get(
+                url, headers={"User-Agent": CDN_USER_AGENT}
+            ) as response:
+                if response.status == 200:
+                    body = await response.read()
+                    kind = response.headers.get("Content-Type", "image/jpeg")
+                    _CACHE[image_id] = (body, kind, now)
+                    return body, kind
+                if not refresh:
+                    continue
+                _LOGGER.debug("Wallpaper %s: CDN said %s", image_id, response.status)
+                raise WallpaperUnavailable(str(response.status))
+        except WallpaperUnavailable:
+            raise
+        except Exception as err:
+            _LOGGER.debug("Wallpaper %s failed: %s", image_id, err)
+            if refresh:
+                raise WallpaperUnavailable(str(err)) from err
+    return None
+
+
 class UgreenWallpaperView(HomeAssistantView):
     """Hand out a wallpaper by its six-character id."""
 
@@ -58,48 +112,19 @@ class UgreenWallpaperView(HomeAssistantView):
     # Home Assistant's own auth applies; the card fetches with the user's token.
     requires_auth = True
 
-    def __init__(self) -> None:
-        self._cache: dict[str, tuple[bytes, str, float]] = {}
-
     async def get(
         self, request: web.Request, entry_id: str, image_id: str
     ) -> web.StreamResponse:
         hass: HomeAssistant = request.app["hass"]
-        now = time.time()
-
-        if (hit := self._cache.get(image_id)) and now - hit[2] < CACHE_SECONDS:
-            return web.Response(body=hit[0], content_type=hit[1])
-
         entry = hass.config_entries.async_get_entry(entry_id)
         coordinator = getattr(entry, "runtime_data", None) if entry else None
         if coordinator is None:
             return web.Response(status=404, text="Unknown charger")
-
-        # One retry with a freshly fetched link: a signature that has expired
-        # since the card was drawn is the ordinary case here, not an error.
-        for refresh in (False, True):
-            url = await coordinator.async_wallpaper_url(image_id, refresh=refresh)
-            if url is None:
-                if refresh:
-                    return web.Response(status=404, text="Unknown picture")
-                continue
-            try:
-                session = async_get_clientsession(hass)
-                async with session.get(
-                    url, headers={"User-Agent": CDN_USER_AGENT}
-                ) as response:
-                    if response.status == 200:
-                        body = await response.read()
-                        kind = response.headers.get("Content-Type", "image/jpeg")
-                        self._cache[image_id] = (body, kind, now)
-                        return web.Response(body=body, content_type=kind)
-                    if not refresh:
-                        continue
-                    _LOGGER.debug("Wallpaper %s: CDN said %s", image_id, response.status)
-                    return web.Response(status=502, text="The picture could not be fetched")
-            except Exception as err:
-                _LOGGER.debug("Wallpaper %s failed: %s", image_id, err)
-                if refresh:
-                    return web.Response(status=502, text="The picture could not be fetched")
-
-        return web.Response(status=404, text="Unknown picture")
+        try:
+            found = await async_wallpaper_bytes(hass, coordinator, image_id)
+        except WallpaperUnavailable:
+            return web.Response(status=502, text="The picture could not be fetched")
+        if found is None:
+            return web.Response(status=404, text="Unknown picture")
+        body, kind = found
+        return web.Response(body=body, content_type=kind)

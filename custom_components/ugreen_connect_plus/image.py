@@ -13,6 +13,9 @@ not go stale, so the image component can fetch it directly.
 
 from __future__ import annotations
 
+import io
+import logging
+
 from homeassistant.components.image import ImageEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -21,6 +24,39 @@ from homeassistant.util import dt as dt_util
 from . import UgreenConfigEntry
 from .coordinator import UgreenCoordinator, device_key
 from .entity import UgreenDeviceEntity
+from .image_proxy import WallpaperUnavailable, async_wallpaper_bytes
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def _upright(body: bytes) -> bytes:
+    """Turn a stored wallpaper the way the screen shows it.
+
+    The charger keeps its pictures as 170x560 -- the screen's 560x170 image
+    given a quarter turn anticlockwise -- and turns them back itself. The
+    dashboard card compensates in CSS, which an entity cannot: it hands out
+    bytes, so the turn has to be in them.
+
+    Anything already wider than it is tall is left alone, which is what a
+    picture uploaded through this integration looks like. So is anything that
+    cannot be turned -- a sideways picture beats no picture, and Pillow is not
+    a dependency worth adding for this.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        return body
+    try:
+        with Image.open(io.BytesIO(body)) as picture:
+            if picture.width >= picture.height:
+                return body
+            kind = picture.format or "JPEG"
+            out = io.BytesIO()
+            picture.transpose(Image.Transpose.ROTATE_270).save(out, format=kind)
+            return out.getvalue()
+    except Exception as err:
+        _LOGGER.debug("Could not turn the wallpaper upright: %s", err)
+        return body
 
 
 async def async_setup_entry(
@@ -29,24 +65,27 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator = entry.runtime_data
-    known: set[str] = set()
+    known_product: set[str] = set()
+    known_wallpaper: set[str] = set()
 
     @callback
     def _add_new_devices() -> None:
-        new = []
+        new: list[ImageEntity] = []
         for device in coordinator.data.get("devices", []):
             key = device_key(device)
-            if key is None or key in known:
+            if key is None:
                 continue
+            if key not in known_wallpaper:
+                known_wallpaper.add(key)
+                new.append(UgreenWallpaperImage(hass, coordinator, key))
             # The product metadata is fetched once per charger and can fail on
             # its own without taking the readings down. Until it arrives there
             # is no picture to show, so the entity waits rather than appearing
-            # empty.
+            # empty -- which is why this one is tracked separately.
             product = coordinator.data.get("detail", {}).get(key) or {}
-            if not product.get("image"):
-                continue
-            known.add(key)
-            new.append(UgreenProductImage(hass, coordinator, key))
+            if key not in known_product and product.get("image"):
+                known_product.add(key)
+                new.append(UgreenProductImage(hass, coordinator, key))
         if new:
             async_add_entities(new)
 
@@ -78,3 +117,64 @@ class UgreenProductImage(UgreenDeviceEntity, ImageEntity):
             self._attr_image_last_updated = dt_util.utcnow()
             self._cached_image = None
         super()._handle_coordinator_update()
+
+
+class UgreenWallpaperImage(UgreenDeviceEntity, ImageEntity):
+    """The picture the charger's screen is showing.
+
+    Not fetched the way the product photo is. The links UGREEN issues for a
+    wallpaper are signed and expire within minutes, so handing one to Home
+    Assistant to fetch later would produce a broken picture more often than
+    not. The bytes are read through the same path the dashboard card uses,
+    which resolves the link at the moment it is needed and refreshes it once if
+    it has gone stale.
+    """
+
+    _attr_translation_key = "wallpaper"
+
+    def __init__(
+        self, hass: HomeAssistant, coordinator: UgreenCoordinator, key: str
+    ) -> None:
+        super().__init__(coordinator, key)
+        ImageEntity.__init__(self, hass)
+        self._attr_unique_id = f"{key}_wallpaper_image"
+        self._shown: str | None = self._current
+        # Turned bytes, kept against the id they came from: the turn is worth
+        # doing once per picture rather than once per request.
+        self._upright: tuple[str, bytes] | None = None
+        self._attr_image_last_updated = dt_util.utcnow()
+
+    @property
+    def _current(self) -> str | None:
+        """The six-character id of the picture on the screen, if there is one."""
+        return (self._reading or {}).get("wallpaper")
+
+    @property
+    def available(self) -> bool:
+        # "None" is a real setting on this charger -- the screen simply shows
+        # the clock -- and there is then no picture to publish.
+        return super().available and bool(self._current)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        if (current := self._current) != self._shown:
+            self._shown = current
+            self._attr_image_last_updated = dt_util.utcnow()
+            self._cached_image = None
+        super()._handle_coordinator_update()
+
+    async def async_image(self) -> bytes | None:
+        if not (image_id := self._current):
+            return None
+        if self._upright and self._upright[0] == image_id:
+            return self._upright[1]
+        try:
+            found = await async_wallpaper_bytes(self.hass, self.coordinator, image_id)
+        except WallpaperUnavailable:
+            return None
+        if found is None:
+            return None
+        body, self._attr_content_type = found
+        body = await self.hass.async_add_executor_job(_upright, body)
+        self._upright = (image_id, body)
+        return body
