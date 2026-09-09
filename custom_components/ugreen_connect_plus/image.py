@@ -13,6 +13,9 @@ not go stale, so the image component can fetch it directly.
 
 from __future__ import annotations
 
+import io
+import logging
+
 from homeassistant.components.image import ImageEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -22,6 +25,38 @@ from . import UgreenConfigEntry
 from .coordinator import UgreenCoordinator, device_key
 from .entity import UgreenDeviceEntity
 from .image_proxy import WallpaperUnavailable, async_wallpaper_bytes
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def _upright(body: bytes) -> bytes:
+    """Turn a stored wallpaper the way the screen shows it.
+
+    The charger keeps its pictures as 170x560 -- the screen's 560x170 image
+    given a quarter turn anticlockwise -- and turns them back itself. The
+    dashboard card compensates in CSS, which an entity cannot: it hands out
+    bytes, so the turn has to be in them.
+
+    Anything already wider than it is tall is left alone, which is what a
+    picture uploaded through this integration looks like. So is anything that
+    cannot be turned -- a sideways picture beats no picture, and Pillow is not
+    a dependency worth adding for this.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        return body
+    try:
+        with Image.open(io.BytesIO(body)) as picture:
+            if picture.width >= picture.height:
+                return body
+            kind = picture.format or "JPEG"
+            out = io.BytesIO()
+            picture.transpose(Image.Transpose.ROTATE_270).save(out, format=kind)
+            return out.getvalue()
+    except Exception as err:
+        _LOGGER.debug("Could not turn the wallpaper upright: %s", err)
+        return body
 
 
 async def async_setup_entry(
@@ -104,6 +139,9 @@ class UgreenWallpaperImage(UgreenDeviceEntity, ImageEntity):
         ImageEntity.__init__(self, hass)
         self._attr_unique_id = f"{key}_wallpaper_image"
         self._shown: str | None = self._current
+        # Turned bytes, kept against the id they came from: the turn is worth
+        # doing once per picture rather than once per request.
+        self._upright: tuple[str, bytes] | None = None
         self._attr_image_last_updated = dt_util.utcnow()
 
     @property
@@ -128,11 +166,15 @@ class UgreenWallpaperImage(UgreenDeviceEntity, ImageEntity):
     async def async_image(self) -> bytes | None:
         if not (image_id := self._current):
             return None
+        if self._upright and self._upright[0] == image_id:
+            return self._upright[1]
         try:
             found = await async_wallpaper_bytes(self.hass, self.coordinator, image_id)
         except WallpaperUnavailable:
             return None
         if found is None:
             return None
-        self._attr_content_type = found[1]
-        return found[0]
+        body, self._attr_content_type = found
+        body = await self.hass.async_add_executor_job(_upright, body)
+        self._upright = (image_id, body)
+        return body
