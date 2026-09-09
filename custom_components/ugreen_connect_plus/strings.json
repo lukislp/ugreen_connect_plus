@@ -218,6 +218,11 @@
           }
         }
       }
+    },
+    "image": {
+      "product": {
+        "name": "Product image"
+      }
     }
   },
   "services": {
