@@ -30,6 +30,7 @@ from .const import (
     WALLPAPER_LIST_INTERVAL,
     WALLPAPER_MISS_INTERVAL,
 )
+from .protocol import PORTS_BY_MODEL, STATE_VERIFIED
 from .rtcx import QUERY_GET_WIFI_SSID, RtcxClient
 from .session import MAX_GAP, SessionTracker
 
@@ -85,6 +86,9 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._wallpaper_missed: dict[str, float] = {}
         self._modes: dict[str, tuple[list[dict[str, Any]], float]] = {}
         self._products: dict[str, Any] = {}
+        # Chargers already told about, so the notice is written once rather
+        # than on every poll.
+        self._noted: set[str] = set()
 
     async def _async_update_data(self) -> dict[str, Any]:
         started = time.monotonic()
@@ -152,11 +156,18 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if key is None or not iot_id:
                 continue
             try:
-                power[key] = await self.rtcx.async_power(iot_id)
+                # productNo is the account API's name for the model, and it
+                # is what decides how many ports the report has and what they
+                # are called.
+                model = (self._products.get(key) or {}).get("productNo")
+                self._note_support(key, model)
+                power[key] = await self.rtcx.async_power(iot_id, model)
                 if power[key] is None:
                     errors[key] = "device returned no usable PT_data frame"
                 else:
-                    power[key].update(await self.rtcx.async_device_state(iot_id) or {})
+                    power[key].update(
+                        await self.rtcx.async_device_state(iot_id, model) or {}
+                    )
                     power[key].update(await self._static_info(key, iot_id))
                     power[key]["ota"] = self.rtcx.ota_state()
                     power[key]["custom_name"] = await self._custom_mode_name(
@@ -220,6 +231,37 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         info = {k: v if v is not None else cached.get(k) for k, v in info.items()}
         self._static[key] = (info, time.time())
         return info
+
+    def _note_support(self, key: str, model: str | None) -> None:
+        """Say once what a charger of this model gets, and what it does not.
+
+        Silence would be the wrong answer here: someone whose charger shows
+        ports called P1..P4 and no screen settings deserves to be told that
+        this is deliberate and what would change it, rather than left to
+        conclude the integration is broken.
+        """
+        if model is None or key in self._noted:
+            return
+        self._noted.add(key)
+        if model in PORTS_BY_MODEL and model in STATE_VERIFIED:
+            return
+        if model in PORTS_BY_MODEL:
+            _LOGGER.warning(
+                "%s: port readings and their names are known for this model, but its "
+                "screen settings have never been read on one, so those entities are "
+                "left out rather than guessed at. A diagnostics download on the "
+                "issue tracker is what would change that",
+                model,
+            )
+            return
+        _LOGGER.warning(
+            "%s is a model this has not seen: its ports are counted from the "
+            "charger's own report and numbered P1 upwards, and the screen settings "
+            "and custom mode are left out rather than read from offsets that were "
+            "established on a different charger. Readings are unaffected. A "
+            "diagnostics download on the issue tracker is what would change that",
+            model,
+        )
 
     async def _custom_mode_name(
         self, device: dict[str, Any], key: str, groups: list[dict[str, Any]] | None
@@ -347,6 +389,16 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.warning("Could not write %s: %s", path, err)
         else:
             _LOGGER.info("Wrote raw UGREEN cloud snapshot to %s", path)
+
+
+def device_ports(coordinator: "UgreenCoordinator", key: str) -> tuple[str, ...]:
+    """The ports this charger's own report carries, in the order it sends them.
+
+    Taken from the reading rather than from a table, so a model nobody here
+    has ever seen still gets an entity per port.
+    """
+    reading = (coordinator.data.get("power") or {}).get(key) or {}
+    return tuple(reading.get("ports") or ())
 
 
 def device_key(device: dict[str, Any]) -> str | None:

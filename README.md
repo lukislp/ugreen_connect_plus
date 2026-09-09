@@ -55,11 +55,49 @@ What it adds on top of 0.17.0:
 - **A setup dialog that only asks for what it keeps.** Three of its fields
   were collected and then quietly thrown away; they are tuning with sensible
   defaults, and the options is where they always did their work.
+- **Other chargers than the one it was written on.** The port list comes from
+  the charger's own report rather than from a constant, so a model nobody here
+  has ever seen still gets an entity for every port it reports; `productNo`
+  supplies the names where they are known and numbers them where they are not.
+  The 160 W X776's names come from its owner's report and have never been
+  checked against one -- nobody here has the hardware. Its custom mode is left
+  alone rather than guessed at: that parameter block's shape is the X783's.
 - **A German translation.**
 
 The fixes were offered upstream first, as
 [PR #3](https://github.com/s1mptom/ugreen_connect/pull/3) and
 [issue #4](https://github.com/s1mptom/ugreen_connect/issues/4).
+
+## Supported chargers
+
+| Model | Readings | Port names | Screen settings | Custom mode |
+| --- | --- | --- | --- | --- |
+| **X783** — Nexode Pro 300W, 8-port | yes | yes | yes | yes |
+| **X776** — Nexode Pro 160W | yes | reported, unverified | no | no |
+| anything else | yes, numbered `P1`… | no | no | no |
+
+Readings work on any of them, because how many ports a charger has can be
+counted from the length of the report it sends. The rest cannot be counted,
+and is not guessed at.
+
+Port *names* come from `productNo`, which is what the account API calls the
+model. The X783's were read off the app's own port table and checked against
+the hardware; the X776's come from
+[an owner's report](https://github.com/s1mptom/ugreen_connect/issues/2) and
+have never been seen here.
+
+The **screen settings** — brightness, screen-off time, charging mode,
+screensaver, wallpaper — are byte offsets in the state reply, each established
+by setting a value in the app and watching which byte moved. On a charger
+whose reply is laid out differently they would read something plausible and
+wrong, and they write back as well as read. So they appear only for a model
+whose reply has actually been read on hardware. The **custom mode** is
+withheld for the same reason, its parameter block being the X783's shape.
+
+The integration says as much itself: an unfamiliar model is logged once, with
+what it gets, what it does not, and what would change that — a diagnostics
+download on the issue tracker, which is all it takes to add a model to the
+table.
 
 ## Why it exists
 
