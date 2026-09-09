@@ -52,8 +52,10 @@ What it adds on top of 0.17.0:
   charging -- roughly 17,000 requests a day become a fraction of that.
 - **The charging mode reported** rather than shown as `unknown` whenever the
   charger sits in a mode this cannot set.
-- **A German translation**, and the setup dialog's own three fields translated
-  at all: they had no entries in any language, English included.
+- **A setup dialog that only asks for what it keeps.** Three of its fields
+  were collected and then quietly thrown away; they are tuning with sensible
+  defaults, and the options is where they always did their work.
+- **A German translation.**
 
 The fixes were offered upstream first, as
 [PR #3](https://github.com/s1mptom/ugreen_connect/pull/3) and

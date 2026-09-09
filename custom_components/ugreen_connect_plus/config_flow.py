@@ -67,26 +67,6 @@ STEP_USER_SCHEMA = vol.Schema(
         ),
         # Off by default: it writes the raw cloud payload, device ids included,
         # next to configuration.yaml on every refresh.
-        vol.Required(
-            CONF_NOMINAL_VOLTAGE, default=DEFAULT_NOMINAL_VOLTAGE
-        ): NumberSelector(
-            NumberSelectorConfig(
-                min=1, max=30, step=0.05, unit_of_measurement="V",
-                mode=NumberSelectorMode.BOX,
-            )
-        ),
-        vol.Required(CONF_EFFICIENCY, default=DEFAULT_EFFICIENCY): NumberSelector(
-            NumberSelectorConfig(
-                min=50, max=100, step=1, unit_of_measurement="%",
-                mode=NumberSelectorMode.SLIDER,
-            )
-        ),
-        vol.Required(CONF_IDLE_END, default=DEFAULT_IDLE_END): NumberSelector(
-            NumberSelectorConfig(
-                min=5, max=1440, step=5, unit_of_measurement="min",
-                mode=NumberSelectorMode.BOX,
-            )
-        ),
         vol.Required(CONF_DEBUG_DUMP, default=False): bool,
     }
 )
