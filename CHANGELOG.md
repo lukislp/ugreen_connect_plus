@@ -1,3 +1,10 @@
+## [0.21.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.21.0...v0.21.1) (2026-09-09)
+
+
+### Performance Improvements
+
+* ask the cloud for what changes, at the rate it changes ([cbb1318](https://github.com/lukislp/ugreen_connect_plus/commit/cbb13180da477164a989de626de9b3ecd1f43dce))
+
 # [0.21.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.20.0...v0.21.0) (2026-09-09)
 
 
