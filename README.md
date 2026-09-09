@@ -464,8 +464,10 @@ chargers — the port table and the byte offsets in `const.py` and `rtcx.py` are
 specific to the 300W eight-port model and are the first thing another one will
 disagree about. A
 diagnostics download (*Settings → Devices & Services → UGREEN Connect →
-Download diagnostics*) is the most useful thing to attach; it has credentials
-redacted.
+Download diagnostics*) is the most useful thing to attach, because it carries
+the raw frames themselves. It is written to be safe to post in public: the
+account, the charger's serial number and MAC, its cloud id and the Wi-Fi
+network name it is joined to are all left out of it.
 
 ## Legal
 
