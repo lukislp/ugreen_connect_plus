@@ -1,3 +1,10 @@
+# [0.21.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.20.0...v0.21.0) (2026-09-09)
+
+
+### Features
+
+* work on chargers other than the one it was written on ([4f8817e](https://github.com/lukislp/ugreen_connect_plus/commit/4f8817e4d2611e0ccb42355133f2ccfc8efd580b))
+
 # [0.20.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.19.1...v0.20.0) (2026-09-09)
 
 
