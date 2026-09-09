@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import UgreenConfigEntry
 from .coordinator import UgreenCoordinator, device_key
-from .entity import UgreenDeviceEntity
+from .entity import UgreenDeviceEntity, cloud_errors
 
 
 async def async_setup_entry(
@@ -73,14 +73,15 @@ class UgreenScreensaver(UgreenDeviceEntity, SwitchEntity):
             return
         # The command carries the whole screensaver block, so the theme and the
         # chosen wallpaper have to be sent back unchanged or they get wiped.
-        await self.coordinator.rtcx.async_set_screensaver(
-            iot_id,
-            enabled,
-            reading.get("screensaver_theme", 0),
-            reading.get("screensaver_flag", 0),
-            reading.get("wallpaper"),
-        )
-        await self.coordinator.async_read_back(self._key, iot_id)
+        with cloud_errors():
+            await self.coordinator.rtcx.async_set_screensaver(
+                iot_id,
+                enabled,
+                reading.get("screensaver_theme", 0),
+                reading.get("screensaver_flag", 0),
+                reading.get("wallpaper"),
+            )
+            await self.coordinator.async_read_back(self._key, iot_id)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._async_set(True)

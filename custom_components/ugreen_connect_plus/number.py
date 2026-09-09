@@ -9,7 +9,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import UgreenConfigEntry
 from .coordinator import UgreenCoordinator, device_key
-from .entity import UgreenDeviceEntity
+from .entity import UgreenDeviceEntity, cloud_errors
 
 
 async def async_setup_entry(
@@ -67,5 +67,6 @@ class UgreenBrightness(UgreenDeviceEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         if not (iot_id := self._iot_id):
             return
-        await self.coordinator.rtcx.async_set_brightness(iot_id, int(value))
-        await self.coordinator.async_read_back(self._key, iot_id)
+        with cloud_errors():
+            await self.coordinator.rtcx.async_set_brightness(iot_id, int(value))
+            await self.coordinator.async_read_back(self._key, iot_id)

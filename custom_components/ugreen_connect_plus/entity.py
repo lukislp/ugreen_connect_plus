@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
@@ -13,11 +16,30 @@ from homeassistant.helpers.device_registry import (
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .api import UgreenError
 from .const import CONF_PORT_DEVICES, DEFAULT_PORT_DEVICES, DOMAIN
 from .coordinator import UgreenCoordinator, device_key
 
 # extra.onlineStatus / extra.networkStatus are 1 when up, 0 when down.
 ONLINE = 1
+
+
+@contextmanager
+def cloud_errors() -> Iterator[None]:
+    """Say what went wrong, rather than letting a trace say it badly.
+
+    A polling failure is the coordinator's business and belongs in the log. A
+    failure while somebody is pressing a button is theirs, and Home Assistant
+    only shows it to them if it arrives as a HomeAssistantError -- anything
+    else is logged as an unexpected exception and reaches the person as a
+    notice that something went wrong somewhere. The messages this wraps are
+    usually the actionable kind: the cloud is refusing requests, the account is
+    signed in somewhere else.
+    """
+    try:
+        yield
+    except UgreenError as err:
+        raise HomeAssistantError(str(err)) from err
 
 
 class UgreenDeviceEntity(CoordinatorEntity[UgreenCoordinator]):

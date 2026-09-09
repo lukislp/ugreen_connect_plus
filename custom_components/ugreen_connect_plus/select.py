@@ -21,7 +21,7 @@ from .const import (
     TIME_FORMATS,
 )
 from .coordinator import UgreenCoordinator, device_key
-from .entity import UgreenDeviceEntity
+from .entity import UgreenDeviceEntity, cloud_errors
 from .image_proxy import wallpaper_path
 
 MODE_VALUE = {name: value for value, name in CHARGING_MODES.items()}
@@ -118,8 +118,9 @@ class UgreenChargingMode(UgreenDeviceEntity, SelectEntity):
         iot_id = self._iot_id
         if not iot_id or option not in MODE_VALUE:
             return
-        await self.coordinator.rtcx.async_set_charging_mode(iot_id, MODE_VALUE[option])
-        await self.coordinator.async_read_back(self._key, iot_id)
+        with cloud_errors():
+            await self.coordinator.rtcx.async_set_charging_mode(iot_id, MODE_VALUE[option])
+            await self.coordinator.async_read_back(self._key, iot_id)
 
 
 class UgreenWallpaper(UgreenDeviceEntity, SelectEntity):
@@ -194,22 +195,24 @@ class UgreenWallpaper(UgreenDeviceEntity, SelectEntity):
                 None,
             )
             if offer and offer.get("url"):
-                await self.coordinator.rtcx.async_set_picture(
-                    iot_id, offer["url"], offer.get("size") or 0, wallpaper,
-                    stock=bool(offer.get("stock")),
-                )
+                with cloud_errors():
+                    await self.coordinator.rtcx.async_set_picture(
+                        iot_id, offer["url"], offer.get("size") or 0, wallpaper,
+                        stock=bool(offer.get("stock")),
+                    )
                 await asyncio.sleep(PICTURE_SETTLE_SECONDS)
 
         # Same block as the screensaver switch: send the current flags back so
         # picking a picture does not also turn the screensaver off.
-        await self.coordinator.rtcx.async_set_screensaver(
-            iot_id,
-            bool(reading.get("screensaver", True)),
-            reading.get("screensaver_theme", 0),
-            reading.get("screensaver_flag", 0),
-            wallpaper,
-        )
-        await self.coordinator.async_read_back(self._key, iot_id)
+        with cloud_errors():
+            await self.coordinator.rtcx.async_set_screensaver(
+                iot_id,
+                bool(reading.get("screensaver", True)),
+                reading.get("screensaver_theme", 0),
+                reading.get("screensaver_flag", 0),
+                wallpaper,
+            )
+            await self.coordinator.async_read_back(self._key, iot_id)
 
 
 class _UgreenScreensaverOption(UgreenDeviceEntity, SelectEntity):
@@ -225,14 +228,15 @@ class _UgreenScreensaverOption(UgreenDeviceEntity, SelectEntity):
         iot_id = self._iot_id
         if not iot_id:
             return
-        await self.coordinator.rtcx.async_set_screensaver(
-            iot_id,
-            bool(reading.get("screensaver", True)),
-            reading.get("screensaver_theme", 0) if theme is None else theme,
-            reading.get("screensaver_flag", 0) if flag is None else flag,
-            reading.get("wallpaper"),
-        )
-        await self.coordinator.async_read_back(self._key, iot_id)
+        with cloud_errors():
+            await self.coordinator.rtcx.async_set_screensaver(
+                iot_id,
+                bool(reading.get("screensaver", True)),
+                reading.get("screensaver_theme", 0) if theme is None else theme,
+                reading.get("screensaver_flag", 0) if flag is None else flag,
+                reading.get("wallpaper"),
+            )
+            await self.coordinator.async_read_back(self._key, iot_id)
 
 
 class UgreenClockStyle(_UgreenScreensaverOption):
@@ -313,5 +317,6 @@ class UgreenSleepTime(UgreenDeviceEntity, SelectEntity):
         iot_id = self._iot_id
         if not iot_id or option not in SLEEP_OPTIONS:
             return
-        await self.coordinator.rtcx.async_set_sleep_time(iot_id, SLEEP_OPTIONS[option])
-        await self.coordinator.async_read_back(self._key, iot_id)
+        with cloud_errors():
+            await self.coordinator.rtcx.async_set_sleep_time(iot_id, SLEEP_OPTIONS[option])
+            await self.coordinator.async_read_back(self._key, iot_id)

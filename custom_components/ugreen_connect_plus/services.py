@@ -23,6 +23,7 @@ from homeassistant.helpers import device_registry as dr
 
 from .const import DOMAIN, WALLPAPER_SIZE
 from .coordinator import device_key
+from .entity import cloud_errors
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -167,7 +168,12 @@ async def async_register(hass: HomeAssistant) -> None:
         _LOGGER.info("Wallpaper %s is now on %s", wallpaper_id, device.name)
         await coordinator.async_request_refresh()
 
-    hass.services.async_register(DOMAIN, SERVICE_SET_WALLPAPER, _handle, schema=SCHEMA)
+    async def _guarded(call: ServiceCall) -> None:
+        """Every cloud call in there can fail, and someone is waiting on it."""
+        with cloud_errors():
+            await _handle(call)
+
+    hass.services.async_register(DOMAIN, SERVICE_SET_WALLPAPER, _guarded, schema=SCHEMA)
 
 
 def _decode(encoded: str) -> bytes:
