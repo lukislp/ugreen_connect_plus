@@ -22,6 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: hacs/action@main
+        # Without a token the action reads this repository anonymously, which
+        # for a private one means reading nothing -- and it reports that as an
+        # invalid hacs.json and a manifest it could not find.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           category: integration
 
