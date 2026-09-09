@@ -152,7 +152,10 @@ class UgreenApi:
 
         payload = await self._call(path, body, method, auth, extra_headers)
 
-        if payload.get("code") == CODE_WRONG_METHOD and (
+        # Left nested: collapsing it puts the walrus and its use into a single
+        # condition, and what this is doing -- the API answered that the verb
+        # was wrong and named the right one -- stops being readable.
+        if payload.get("code") == CODE_WRONG_METHOD and (  # noqa: SIM102
             wanted := _wanted_method(payload.get("msg", ""))
         ):
             if wanted != method:
@@ -457,7 +460,7 @@ def _jwt_expiry(token: str) -> float:
         part = token.removeprefix("Bearer ").split(".")[1]
         claims = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
         return float(claims["exp"])
-    except Exception:  # noqa: BLE001 - a malformed token just means "unknown"
+    except Exception:
         return 0.0
 
 

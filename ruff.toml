@@ -1,0 +1,21 @@
+# Deliberately a narrow set. The point is to catch what slips past a person
+# editing several files at once -- imports left behind by a refactor, a name
+# that no longer exists -- not to argue about style with code inherited from
+# somewhere else.
+line-length = 100
+
+[lint]
+select = ["E", "F", "I", "UP", "SIM", "RUF"]
+ignore = [
+    # Home Assistant's own entity classes assign plain lists to `_attr_options`
+    # and `_attr_event_types`; they are read, never mutated, and rewriting them
+    # as ClassVar to satisfy a linter would make this code look unlike every
+    # other integration.
+    "RUF012",
+]
+
+[lint.per-file-ignores]
+# The tests compile the Home-Assistant-free modules straight from their source
+# rather than importing them through the package, which would drag Home
+# Assistant in. That is the whole point of the file, and it says so.
+"tests/conftest.py" = ["S102"]

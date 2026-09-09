@@ -21,7 +21,6 @@ from homeassistant.const import (
     UnitOfPower,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -31,12 +30,11 @@ from . import UgreenConfigEntry
 from .const import (
     CONF_EFFICIENCY,
     CONF_NOMINAL_VOLTAGE,
-    DEFAULT_EFFICIENCY,
-    DEFAULT_NOMINAL_VOLTAGE,
     CUSTOM_PORTS,
     CUSTOM_SHARED_GROUP,
     CUSTOM_SHARED_MEMBERS,
-    DOMAIN,
+    DEFAULT_EFFICIENCY,
+    DEFAULT_NOMINAL_VOLTAGE,
     HANDSHAKE_PROTOCOL,
 )
 from .coordinator import UgreenCoordinator, device_key, device_ports

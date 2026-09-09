@@ -39,18 +39,22 @@ from typing import Any
 import aiohttp
 
 from .api import UgreenApi, UgreenAuthError, UgreenError
+from .const import (
+    CHARGING_MODES,
+    GATEWAY_LANGUAGE,
+    GATEWAY_OK,
+    PT_DATA_MAX_AGE,
+    PT_DATA_WAITS,
+    RTCX_TOKEN_MARGIN,
+)
 from .protocol import (
     CHARGING_MODE_PARAMS,
-    state_is_readable,
     FRAME_QUERY,
     FRAME_SETTING,
     IMAGE_ID_LEN,
     QUERY_GET_DEVICE_STATE,
     QUERY_GET_POWER_INFO,
     QUERY_GET_PRODUCT_VERSION,
-    QUERY_GET_SN,
-    QUERY_GET_UPGRADE_STATUS,
-    QUERY_GET_WIFI_SSID,
     SETTING_SET_BRIGHTNESS,
     SETTING_SET_CHARGING_MODE,
     SETTING_SET_SCREENSAVER,
@@ -65,19 +69,7 @@ from .protocol import (
     frame_body,
     parse_custom_mode,
     parse_power_frame,
-)
-from .const import (
-    CHARGING_MODES,
-    CUSTOM_PORTS,
-    CUSTOM_PROTOCOLS,
-    CUSTOM_SHARED_STEP,
-    GATEWAY_LANGUAGE,
-    GATEWAY_OK,
-    HANDSHAKE_PROTOCOL,
-    POWER_POLL_ATTEMPTS,
-    POWER_SETTLE_SECONDS,
-    PT_DATA_MAX_AGE,
-    RTCX_TOKEN_MARGIN,
+    state_is_readable,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -100,6 +92,14 @@ class RtcxClient:
         self._lock = asyncio.Lock()
         # Last propertyMap seen, so OTA state can be read without another call.
         self.last_properties: dict[str, Any] = {}
+        # The last raw frame each question was answered with. Kept for the
+        # diagnostics download: on a model nobody here has, the decoded values
+        # are only as good as the offsets, and the bytes are what someone else
+        # can check them against.
+        self.last_frames: dict[str, str] = {}
+        # Chargers whose state reply is no longer what we last read, because
+        # something here has written to them since.
+        self._state_dirty: set[str] = set()
         # Stable per-account, so the cloud sees one client rather than a new one
         # on every restart. The app uses "ANDRC_" + 12 hex.
         self._client_key = "ANDRC_" + hashlib.sha256(
@@ -252,8 +252,8 @@ class RtcxClient:
         # property still holds the previous reply -- which is a different
         # command's frame and would be read as "no data". So poll until the
         # frame on offer is the one that was asked for.
-        for attempt in range(POWER_POLL_ATTEMPTS):
-            await asyncio.sleep(POWER_SETTLE_SECONDS)
+        for attempt, wait in enumerate(PT_DATA_WAITS):
+            await asyncio.sleep(wait)
             payload_map = await self.call(
                 "/client/thing/properties/get/all", {"iotId": iot_id}
             )
@@ -275,6 +275,7 @@ class RtcxClient:
                 for name, entries in prop_map.items()
             }
             if value and frame_body(value, frame_type, cmd) is not None:
+                self.last_frames[f"{frame_type:02X}/{cmd}"] = value
                 return value
             _LOGGER.debug(
                 "PT_data is not the reply to 0x%02X/%d yet (try %d)",
@@ -368,11 +369,22 @@ class RtcxClient:
             "wallpapers": wallpapers,
         }
 
+    def state_is_stale(self, iot_id: str) -> bool:
+        """Whether this charger has been written to since its state was read."""
+        return iot_id in self._state_dirty
+
+    def state_was_read(self, iot_id: str) -> None:
+        self._state_dirty.discard(iot_id)
+
     async def _setting(self, iot_id: str, cmd: int, payload: bytes) -> None:
         await self.call(
             "/client/thing/properties/set",
             {"iotId": iot_id, "items": {"PT_data": build_frame(FRAME_SETTING, cmd, payload)}},
         )
+        # Everything set this way shows up in the state reply, so whatever was
+        # last read of it is now out of date. Marked here rather than at each
+        # of the six places that write, so a seventh cannot forget to.
+        self._state_dirty.add(iot_id)
 
     async def async_set_picture(
         self, iot_id: str, url: str, size: int, image_id: str, stock: bool = False
@@ -398,6 +410,7 @@ class RtcxClient:
                 },
             },
         )
+        self._state_dirty.add(iot_id)
 
     async def async_set_brightness(self, iot_id: str, value: int) -> None:
         await self._setting(
@@ -452,5 +465,5 @@ def _jwt_expiry(token: str) -> float:
         part = token.removeprefix("Bearer ").split(".")[1]
         claims = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
         return float(claims["exp"])
-    except Exception:  # noqa: BLE001 - a malformed token just means "unknown"
+    except Exception:
         return 0.0

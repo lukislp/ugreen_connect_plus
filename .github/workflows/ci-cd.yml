@@ -57,6 +57,17 @@ jobs:
           exit 1
       - uses: home-assistant/actions/hassfest@master
 
+  test-lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install ruff
+      - run: ruff check .
+
   test-unit:
     name: Session logic
     runs-on: ubuntu-latest
@@ -76,7 +87,7 @@ jobs:
   # -------------------------------------------------------------------------
   get-version:
     name: Is a release due
-    needs: [test-hacs-validation, test-hassfest, test-unit]
+    needs: [test-hacs-validation, test-hassfest, test-lint, test-unit]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     concurrency:
