@@ -68,7 +68,4 @@ class UgreenBrightness(UgreenDeviceEntity, NumberEntity):
         if not (iot_id := self._iot_id):
             return
         await self.coordinator.rtcx.async_set_brightness(iot_id, int(value))
-        # Show the new value at once; the next poll confirms it from the device.
-        if reading := self._reading:
-            reading["brightness"] = int(value)
-        self.async_write_ha_state()
+        await self.coordinator.async_read_back(self._key, iot_id)

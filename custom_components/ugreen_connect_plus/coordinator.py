@@ -277,6 +277,27 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._state[key] = (state, time.time())
         return state
 
+    async def async_read_back(self, key: str, iot_id: str) -> None:
+        """Publish what the charger did with a write, not what it was asked.
+
+        A setting can be declined without anything saying so: the frame is
+        accepted, and the state simply does not change. DC turbo is declined
+        on an X783 unless the DC port has something on it -- watched happening,
+        not supposed. An entity that wrote its own request into the reading and
+        called it current would then show a value the charger never held, until
+        a state read next came round. Idle polling stretches that to a minute,
+        which is exactly when someone is sitting in front of the settings.
+
+        The write has already marked the cached state stale, so this costs one
+        round trip and no request the next poll would not have made anyway.
+        """
+        reading = ((self.data or {}).get("power") or {}).get(key)
+        if reading is None:
+            return
+        model = (self._products.get(key) or {}).get("productNo")
+        reading.update(await self._device_state(key, iot_id, model))
+        self.async_update_listeners()
+
     async def _static_info(self, key: str, iot_id: str) -> dict[str, Any]:
         """Firmware version and SSID -- cached, since each costs a round trip to
         the device and neither changes between polls."""

@@ -129,6 +129,15 @@ CHARGING_MODES: Final[dict[int, str]] = {
     3: "priority",
     4: "custom",
 }
+# What may be asked for. "custom" is missing because setting it would mean
+# sending the 35 parameter bytes the app's editor fills in, and inventing those
+# would overwrite whatever the owner configured there.
+#
+# "dc_turbo" is here because the charger does accept the command -- but it does
+# not always act on it. Asked for it on an X783 with nothing on the DC port,
+# the frame went through and the mode stayed where it was. Nothing reports the
+# refusal, which is why every write reads the charger back rather than trusting
+# what it asked for.
 SELECTABLE_MODES: Final[tuple[str, ...]] = (
     "adaptive_power", "thermal_safe", "dc_turbo", "priority",
 )
