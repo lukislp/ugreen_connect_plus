@@ -38,10 +38,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # hassfest runs from an image on ghcr.io, and an anonymous pull is rate
-      # limited hard enough that the same commit passes or fails depending on
-      # the hour. The runner already holds a token that lifts the limit.
+      # hassfest runs from an image on ghcr.io, and the registry throttles
+      # hard enough -- registry-wide, not per account, so a token does not
+      # help -- that the same commit passes or fails depending on the hour.
+      # Pulling it here with a few attempts leaves the image in place, so the
+      # action itself has nothing left to fetch.
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Fetch the hassfest image, retrying
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if docker pull ghcr.io/home-assistant/hassfest:latest; then
+              exit 0
+            fi
+            echo "attempt $attempt did not get it; waiting $((attempt * 15))s"
+            sleep $((attempt * 15))
+          done
+          echo "::error::ghcr.io would not hand over the hassfest image after five attempts"
+          exit 1
       - uses: home-assistant/actions/hassfest@master
 
   test-unit:
