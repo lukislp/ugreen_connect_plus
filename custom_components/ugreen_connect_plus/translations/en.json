@@ -8,10 +8,12 @@
           "email": "Email",
           "password": "Password",
           "region": "Region",
-          "debug_dump": "Write a raw cloud snapshot to the config folder"
+          "debug_dump": "Write a raw cloud snapshot to the config folder",
+          "port_devices": "A device for each port"
         },
         "data_description": {
-          "debug_dump": "Saves ugreen_connect_plus_debug.json once per restart. Useful while the integration is still being built out; safe to turn off later."
+          "debug_dump": "Saves ugreen_connect_plus_debug.json once per restart. Useful while the integration is still being built out; safe to turn off later.",
+          "port_devices": "Every port becomes a device of its own, so a port answers for itself. Turned off, everything hangs on the charger instead. It can be changed later, but changing it moves entities between devices, and whatever pointed at the old ones has to be set up again -- so it is worth deciding now."
         }
       },
       "reauth_confirm": {

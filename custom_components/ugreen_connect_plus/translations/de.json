@@ -8,10 +8,12 @@
           "email": "E-Mail",
           "password": "Passwort",
           "region": "Region",
-          "debug_dump": "Rohen Cloud-Schnappschuss in den Konfigurationsordner schreiben"
+          "debug_dump": "Rohen Cloud-Schnappschuss in den Konfigurationsordner schreiben",
+          "port_devices": "Ein Gerät je Port"
         },
         "data_description": {
-          "debug_dump": "Speichert ugreen_connect_plus_debug.json einmal pro Neustart. Nützlich, solange die Integration noch ausgebaut wird; kann später gefahrlos abgeschaltet werden."
+          "debug_dump": "Speichert ugreen_connect_plus_debug.json einmal pro Neustart. Nützlich, solange die Integration noch ausgebaut wird; kann später gefahrlos abgeschaltet werden.",
+          "port_devices": "Jeder Port wird ein eigenes Gerät und gibt damit selbst Auskunft. Ausgeschaltet hängt alles am Ladegerät. Änderbar bleibt es, aber eine Änderung verschiebt Entitäten zwischen Geräten, und alles, was auf die alten zeigte, muss neu gesetzt werden — die Entscheidung lohnt sich also jetzt."
         }
       },
       "reauth_confirm": {
