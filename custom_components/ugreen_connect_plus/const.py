@@ -6,6 +6,16 @@ from typing import Final
 
 DOMAIN: Final = "ugreen_connect_plus"
 
+# The wire format's own tables live with the codec that reads them; they are
+# re-exported here so that nothing else has to know where the line was drawn.
+from .protocol import (  # noqa: E402
+    CUSTOM_PORTS,
+    CUSTOM_PROTOCOLS,
+    CUSTOM_SHARED_STEP,
+    HANDSHAKE_PROTOCOL,
+    X783_PORTS,
+)
+
 CONF_REGION: Final = "region"
 CONF_LANGUAGE: Final = "language"
 
@@ -91,16 +101,7 @@ PT_DATA_MAX_AGE: Final = 300
 # what the app uploads is this way round.
 WALLPAPER_SIZE: Final[tuple[int, int]] = (560, 170)
 
-# Port order of the power report on the Nexode Pro 300W, from the app's own port
-# table. X783 is what the app calls that model internally, and is kept here
-# because a second model would need its own list beside this one.
-X783_PORTS: Final[tuple[str, ...]] = ("C1", "C2", "C3", "C4", "C5", "C6", "A1", "DC")
 
-# The charging protocol each port negotiated, reported one byte per port at the
-# tail of the power frame.
-HANDSHAKE_PROTOCOL: Final[dict[int, str]] = {
-    0: "none", 1: "QC", 2: "AFC", 3: "FCP", 4: "UFCS", 5: "PD", 6: "PPS", 7: "AVS",
-}
 
 # Firmware version and SSID never change between polls; re-read them rarely.
 STATIC_INFO_INTERVAL: Final = 3600
@@ -120,15 +121,6 @@ SELECTABLE_MODES: Final[tuple[str, ...]] = (
     "adaptive_power", "thermal_safe", "dc_turbo", "priority",
 )
 
-# --- The custom mode's parameter block --------------------------------------
-# The 35 bytes the presets leave at zero. Settled against the app's own editor
-# on a live X783: five ports carry a plain wattage, C6 and A share one setting
-# -- one slider in the app, one byte here -- and each group then has a bitmask
-# of the protocols it may negotiate.
-CUSTOM_PORTS: Final[tuple[str, ...]] = ("C1", "C2", "C3", "C4", "C5", "C6+A")
-# The shared C6+A slider offers 0, 15 and 30 W, and stores the step, not the
-# watts. The five plain ports store watts outright.
-CUSTOM_SHARED_STEP: Final = 15
 # C6 and A are one setting but two sockets. Each socket carries it, so that a
 # port's page answers "what is this port allowed" without sending anyone
 # elsewhere; the name says which other port the figure is shared with.
@@ -139,20 +131,6 @@ CUSTOM_SHARED_MEMBERS: Final[dict[str, str]] = {"C6": "A1", "A1": "C6"}
 # a timer, since renaming one is a thing people do rarely and by hand.
 SMART_MODE_INTERVAL: Final = 900
 
-# Bit positions in a group's protocol mask. The app lists exactly these seven,
-# in this order. Bit 1 belongs to something this model has nothing to put in:
-# ticking every box the app offers for the 140 W port sets the mask to 0xFD,
-# which is these seven and not it. The slot is there in the protocol; the
-# X783 simply never fills it.
-CUSTOM_PROTOCOLS: Final[dict[int, str]] = {
-    0: "Apple5V/2.4A",
-    2: "AFC",
-    3: "SCP",
-    4: "UFCS",
-    5: "5-11V PPS",
-    6: "5-21V PPS",
-    7: "AVS",
-}
 
 # The two bytes after the screensaver's on/off flag. Both were settled by
 # changing them in the app and reading the frame it sent: picking 12- or 24-hour
