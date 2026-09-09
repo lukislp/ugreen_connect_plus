@@ -1,3 +1,10 @@
+## [0.23.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.23.0...v0.23.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* read the charger back after a write instead of assuming it took ([5a1eeb5](https://github.com/lukislp/ugreen_connect_plus/commit/5a1eeb5b8f447ef807320f8d9a7b6c35f8bffb5f))
+
 # [0.23.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.22.1...v0.23.0) (2026-09-09)
 
 
