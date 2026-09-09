@@ -19,12 +19,15 @@ jobs:
   hacs:
     name: HACS
     runs-on: ubuntu-latest
+    # The check reads the repository through the API and cannot see a private
+    # one -- a token does not help. It reports that as an invalid hacs.json and
+    # a manifest it could not find, which sends people looking for a fault in
+    # files that are fine: the identical files pass upstream, in public. So it
+    # is skipped while this is private, and comes back by itself if it opens.
+    if: ${{ !github.event.repository.private }}
     steps:
       - uses: actions/checkout@v7
       - uses: hacs/action@main
-        # Without a token the action reads this repository anonymously, which
-        # for a private one means reading nothing -- and it reports that as an
-        # invalid hacs.json and a manifest it could not find.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
