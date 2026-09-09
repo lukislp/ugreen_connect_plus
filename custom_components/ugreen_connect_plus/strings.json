@@ -22,15 +22,26 @@
         "data": {
           "password": "Password"
         }
+      },
+      "reconfigure": {
+        "title": "UGREEN Connect Plus",
+        "description": "Change the account or the region this charger is reached through. It has to stay the same account -- a different one is a different set of chargers, and these entities belong to this one.",
+        "data": {
+          "email": "Email",
+          "password": "Password",
+          "region": "Region"
+        }
       }
     },
     "error": {
       "cannot_connect": "Could not reach the UGREEN cloud.",
-      "invalid_auth": "The account or password was rejected."
+      "invalid_auth": "The account or password was rejected.",
+      "wrong_account": "That is a different account from the one this was set up with. Add it as its own integration rather than changing this one over."
     },
     "abort": {
       "already_configured": "This account is already set up.",
-      "reauth_successful": "Re-authentication was successful."
+      "reauth_successful": "Re-authentication was successful.",
+      "reconfigure_successful": "Saved."
     }
   },
   "selector": {
@@ -265,6 +276,12 @@
   "exceptions": {
     "mode_not_selectable": {
       "message": "{mode} cannot be set from Home Assistant. It needs the parameters that only the UgreenConnect app's own mode editor fills in, and sending invented ones would overwrite what is configured there."
+    }
+  },
+  "issues": {
+    "readings_stale": {
+      "title": "The charger's readings have stopped arriving",
+      "description": "Nothing whole has come back from UGREEN's cloud for {minutes} minutes, so every value shown for this charger is at least that old. Short outages are ordinary here and pass on their own; this long usually means the account was signed in elsewhere, or the charger is off the network."
     }
   }
 }

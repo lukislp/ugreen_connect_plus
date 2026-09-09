@@ -99,6 +99,12 @@ PT_DATA_WAITS: Final[tuple[float, ...]] = (0.8, 1.5, 2.5)
 # wattage; a setting written from here marks them stale at once, so nobody
 # waits this out to see their own change.
 DEVICE_STATE_INTERVAL: Final = 60
+
+# How long the readings may go without a whole poll before Home Assistant is
+# told. A quiet minute is this cloud's ordinary behaviour and worth no alarm;
+# an hour is not. The distance between the two is the point: a notice that
+# cries wolf is one people learn to close without reading.
+STALE_AFTER: Final = 3600
 # PT_data keeps its last value indefinitely, so anything older than this is
 # treated as "no reading" rather than as a live one.
 PT_DATA_MAX_AGE: Final = 300

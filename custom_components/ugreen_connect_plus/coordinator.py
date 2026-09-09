@@ -12,6 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import UgreenApi, UgreenAuthError, UgreenError
@@ -27,6 +28,7 @@ from .const import (
     MIN_POLL_GAP,
     SESSION_GAP_FACTOR,
     SMART_MODE_INTERVAL,
+    STALE_AFTER,
     STATIC_INFO_INTERVAL,
     WALLPAPER_LIST_INTERVAL,
     WALLPAPER_MISS_INTERVAL,
@@ -99,13 +101,14 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         started = time.monotonic()
         try:
             data = await self._async_poll()
+            # Only after a poll has come back whole: the point of publishing
+            # this is to say how stale the readings are while the cloud is
+            # away, and this cloud goes away for minutes at a time.
+            self.last_success = time.time()
+            return data
         finally:
             self._reschedule(time.monotonic() - started)
-        # Only set once a poll has come back whole: the point of publishing it
-        # is to say how stale the readings are while the cloud is away, and
-        # this cloud goes away for minutes at a time.
-        self.last_success = time.time()
-        return data
+            self._flag_staleness()
 
     def _reschedule(self, elapsed: float) -> None:
         """Keep a steady poll *period*, not a steady gap between polls.
@@ -219,6 +222,33 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self.hass.async_add_executor_job(self._write_dump, data)
 
         return data
+
+    def _flag_staleness(self) -> None:
+        """Tell Home Assistant when the readings have gone properly old.
+
+        Every entity keeps its last value while the cloud is unreachable, and
+        nothing about a dashboard says whether a number arrived a second ago
+        or last Tuesday. The timestamp sensor answers that for anyone who
+        looks; this is for everyone who does not.
+        """
+        gone = (
+            self.last_success is None
+            or time.time() - self.last_success > STALE_AFTER
+        )
+        if not gone or self.last_success is None:
+            ir.async_delete_issue(self.hass, DOMAIN, "readings_stale")
+            return
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            "readings_stale",
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="readings_stale",
+            translation_placeholders={
+                "minutes": str(round((time.time() - self.last_success) / 60)),
+            },
+        )
 
     async def _device_state(
         self, key: str, iot_id: str, model: str | None

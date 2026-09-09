@@ -12,10 +12,10 @@ screensaver — clock style, time format and wallpaper, your own included.
 
 ![The charger on a dashboard](docs/dashboard.png)
 
-*That dashboard is [`docs/dashboard.yaml`](docs/dashboard.yaml) — one screenful,
-ready to paste. Its power-history card is `statistics-graph-chart-card` from
-HACS; without it that one card shows an error and everything else still works,
-so delete it or swap in the built-in `history-graph`.*
+*That dashboard is [`docs/dashboard.yaml`](docs/dashboard.yaml), ready to paste
+and built only from cards Home Assistant ships with. The screenshot predates the
+sections for charging, the energy counters and the custom mode's port
+allocation; those are in the file.*
 
 > Not affiliated with, endorsed by, or supported by UGREEN. Trademarks belong to
 > their respective owners.
