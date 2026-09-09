@@ -1,10 +1,6 @@
 # The view in docs/dashboard.png, as one screenful in four columns.
 #
-# REQUIRES, beyond this integration:
-#   statistics-graph-chart-card  (HACS -> Frontend), used by the Power history
-#   card. Without it that one card shows "Custom element doesn't exist" and the
-#   rest of the dashboard is fine -- delete the card, or swap it for the
-#   built-in `type: history-graph` with the same entities.
+# Built from cards Home Assistant ships with; nothing else has to be installed.
 #
 # TO USE: paste under `views:` in a dashboard's raw configuration editor, then
 #   - replace ugreen_nexode_pro_x783 with your charger's own entity prefix, and
@@ -160,98 +156,280 @@ sections:
     heading: Power history
     icon: mdi:chart-line
     heading_style: title
-  - type: custom:statistics-graph-chart-card
-    show_interval_picker: true
+  - type: history-graph
     hours_to_show: 3
-    points_per_hour: 60
-    auto_scale_points: true
-    height: 160
-    update_interval: 60
-    x_grid_style: dashed
-    y_grid_style: dashed
-    chart_mode: timeline
     grid_options:
       columns: full
-    drill_down: true
-    extended_window_multiplier: 2
-    interval_options:
-    - 1H
-    - 4H
-    - 12H
-    - 24H
-    - 7D
-    - 30D
-    auto_scale_rules:
-    - up_to_hours: 24
-      group_by: interval
-      points_per_hour: 12
-    - up_to_hours: 168
-      group_by: interval
-      points_per_hour: 2
-    - up_to_hours: 720
-      group_by: 2h
     entities:
     - entity: sensor.ugreen_nexode_pro_x783_total_power
       name: Total
-      color: '#f5a623'
-      legend_stats:
-      - live
-      primary_state_as: last
-      show_color_dot: true
-      decimals: 1
     - entity: sensor.ugreen_nexode_pro_x783_c1_power
       name: C1
-      color: '#4a90d9'
-      legend_stats:
-      - live
-      primary_state_as: last
-      show_color_dot: true
-      decimals: 1
     - entity: sensor.ugreen_nexode_pro_x783_c2_power
       name: C2
-      color: '#7ed321'
-      legend_stats:
-      - live
-      primary_state_as: last
-      show_color_dot: true
-      decimals: 1
     - entity: sensor.ugreen_nexode_pro_x783_c3_power
       name: C3
-      color: '#bd10e0'
-      legend_stats:
-      - live
-      primary_state_as: last
-      show_color_dot: true
-      decimals: 1
     - entity: sensor.ugreen_nexode_pro_x783_c4_power
       name: C4
-      color: '#50e3c2'
-      legend_stats:
-      - live
-      primary_state_as: last
-      show_color_dot: true
-      decimals: 1
     - entity: sensor.ugreen_nexode_pro_x783_c5_power
       name: C5
-      color: '#e35050'
-      legend_stats:
-      - live
-      primary_state_as: last
-      show_color_dot: true
-      decimals: 1
     - entity: sensor.ugreen_nexode_pro_x783_c6_power
       name: C6
-      color: '#9013fe'
-      legend_stats:
-      - live
-      primary_state_as: last
-      show_color_dot: true
-      decimals: 1
     - entity: sensor.ugreen_nexode_pro_x783_a1_power
       name: A1
-      color: '#b8e986'
-      legend_stats:
-      - live
-      primary_state_as: last
-      show_color_dot: true
-      decimals: 1
+
+- type: grid
+  column_span: 2
+  cards:
+  - type: heading
+    heading: Charging
+    icon: mdi:battery-charging
+    heading_style: title
+  - type: grid
+    columns: 4
+    square: false
+    grid_options:
+      columns: full
+    cards:
+    - type: tile
+      entity: binary_sensor.ugreen_nexode_pro_x783_c1_charging
+      name: C1
+      icon: mdi:battery-charging-outline
+      color: green
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: binary_sensor.ugreen_nexode_pro_x783_c2_charging
+      name: C2
+      icon: mdi:battery-charging-outline
+      color: green
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: binary_sensor.ugreen_nexode_pro_x783_c3_charging
+      name: C3
+      icon: mdi:battery-charging-outline
+      color: green
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: binary_sensor.ugreen_nexode_pro_x783_c4_charging
+      name: C4
+      icon: mdi:battery-charging-outline
+      color: green
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: binary_sensor.ugreen_nexode_pro_x783_c5_charging
+      name: C5
+      icon: mdi:battery-charging-outline
+      color: green
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: binary_sensor.ugreen_nexode_pro_x783_c6_charging
+      name: C6
+      icon: mdi:battery-charging-outline
+      color: green
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: binary_sensor.ugreen_nexode_pro_x783_a1_charging
+      name: A1
+      icon: mdi:battery-charging-outline
+      color: green
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: binary_sensor.ugreen_nexode_pro_x783_dc_charging
+      name: DC
+      icon: mdi:battery-charging-outline
+      color: green
+      vertical: true
+      tap_action:
+        action: more-info
+
+- type: grid
+  column_span: 2
+  cards:
+  - type: heading
+    heading: Energy
+    icon: mdi:lightning-bolt-circle
+    heading_style: title
+  - type: tile
+    entity: sensor.ugreen_nexode_pro_x783_total_energy
+    name: Charger, all time
+    icon: mdi:counter
+    color: amber
+    tap_action:
+      action: more-info
+  - type: grid
+    columns: 4
+    square: false
+    grid_options:
+      columns: full
+    cards:
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c1_total_energy
+      name: C1
+      icon: mdi:counter
+      color: amber
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c2_total_energy
+      name: C2
+      icon: mdi:counter
+      color: amber
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c3_total_energy
+      name: C3
+      icon: mdi:counter
+      color: amber
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c4_total_energy
+      name: C4
+      icon: mdi:counter
+      color: amber
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c5_total_energy
+      name: C5
+      icon: mdi:counter
+      color: amber
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c6_total_energy
+      name: C6
+      icon: mdi:counter
+      color: amber
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_a1_total_energy
+      name: A1
+      icon: mdi:counter
+      color: amber
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_dc_total_energy
+      name: DC
+      icon: mdi:counter
+      color: amber
+      vertical: true
+      tap_action:
+        action: more-info
+
+- type: grid
+  column_span: 2
+  cards:
+  - type: heading
+    heading: Port allocation
+    icon: mdi:tune-variant
+    heading_style: title
+  - type: tile
+    entity: sensor.ugreen_nexode_pro_x783_custom_mode
+    name: Mode in the app
+    icon: mdi:tune-variant
+    tap_action:
+      action: more-info
+  - type: grid
+    columns: 3
+    square: false
+    grid_options:
+      columns: full
+    cards:
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c1_custom_limit
+      name: C1
+      icon: mdi:speedometer
+      color: purple
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c2_custom_limit
+      name: C2
+      icon: mdi:speedometer
+      color: purple
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c3_custom_limit
+      name: C3
+      icon: mdi:speedometer
+      color: purple
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c4_custom_limit
+      name: C4
+      icon: mdi:speedometer
+      color: purple
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c5_custom_limit
+      name: C5
+      icon: mdi:speedometer
+      color: purple
+      vertical: true
+      tap_action:
+        action: more-info
+    - type: tile
+      entity: sensor.ugreen_nexode_pro_x783_c6_custom_limit_shared_with_a1
+      name: C6+A
+      icon: mdi:speedometer
+      color: purple
+      vertical: true
+      tap_action:
+        action: more-info
+  - type: markdown
+    content: >-
+      Only while the charger is running its custom mode; a preset leaves these
+      unavailable. Each tile's attributes carry the protocols that port may
+      negotiate.
+
+- type: grid
+  column_span: 1
+  cards:
+  - type: heading
+    heading: Diagnostics
+    icon: mdi:stethoscope
+    heading_style: title
+  - type: tile
+    entity: sensor.ugreen_nexode_pro_x783_last_successful_poll
+    name: Last reading
+    icon: mdi:clock-check-outline
+    tap_action:
+      action: more-info
+  - type: tile
+    entity: sensor.ugreen_nexode_pro_x783_wi_fi_network
+    name: Wi-Fi
+    icon: mdi:wifi
+    tap_action:
+      action: more-info
