@@ -1,0 +1,108 @@
+blueprint:
+  name: UGREEN charger — say when a port has finished
+  description: >-
+    Sends a notification when a port stops charging, with how much went in and
+    how long it took.
+
+
+    The integration decides what "finished" means, which is the point of using
+    this rather than a template: a full phone still reports the charger's 0.1 A
+    measurement quantum, and a bare cable produces a stray current the charger
+    itself rounds to 0 W. A threshold written by hand either announces a laptop
+    that is still charging or misses one that finished an hour ago.
+
+
+    A port that sits idle for a while and then draws again — a phone topping
+    itself up at 100%, a battery dock between sips — is one charging session,
+    not several, so this fires once at the end rather than at every pause.
+  domain: automation
+  source_url: https://github.com/lukislp/ugreen_connect_plus/blob/main/blueprints/automation/ugreen_connect_plus/charging_finished.yaml
+  input:
+    port:
+      name: Port
+      description: The charging event entity of the port to watch.
+      selector:
+        entity:
+          filter:
+            - integration: ugreen_connect_plus
+              domain: event
+    notification:
+      name: How to tell you
+      description: >-
+        What to do when a port finishes. The default posts a notification in
+        Home Assistant itself; pick your phone, a speaker or anything else
+        instead.
+
+
+        `{{ message }}` is the sentence this blueprint composes, and
+        `{{ title }}` the heading. `{{ energy }}`, `{{ spent }}`, `{{ peak }}`
+        and `{{ protocol }}` are there too, if you would rather write your own.
+      default:
+        - action: persistent_notification.create
+          data:
+            title: "{{ title }}"
+            message: "{{ message }}"
+      selector:
+        action: {}
+    title:
+      name: Title
+      default: Charging finished
+      selector:
+        text:
+    minimum_energy:
+      name: Ignore anything smaller than
+      description: >-
+        Sessions below this are not worth a notification: plugging a cable in
+        and out again registers as a very short one.
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: Wh
+          mode: box
+
+mode: parallel
+max_exceeded: silent
+
+# An event entity's state is the timestamp of its last event, so every event
+# is a state change even when two of the same kind follow each other. Which
+# kind it was is an attribute, and that is what the condition reads -- watching
+# the attribute for a change would miss a second `ended` in a row.
+triggers:
+  - trigger: state
+    entity_id: !input port
+
+conditions:
+  - condition: template
+    value_template: >-
+      {{ attrs.get('event_type') == 'ended' and energy >= (minimum_energy | float(0)) }}
+
+variables:
+  minimum_energy: !input minimum_energy
+  title: !input title
+  # Every one of these reaches for the attribute rather than naming it.
+  # Variables are rendered before the conditions, on every state change the
+  # trigger sees -- including the entity coming up at startup with no event
+  # behind it yet -- so naming an attribute that is not there would fill the
+  # log with rendering errors before the condition ever got its say.
+  attrs: "{{ trigger.to_state.attributes if trigger.to_state else {} }}"
+  energy: "{{ attrs.get('energy_wh') | float(0) | round(1) }}"
+  seconds: "{{ attrs.get('duration') | int(0) }}"
+  peak: "{{ attrs.get('peak_power') | float(0) | round(1) }}"
+  protocol: "{{ attrs.get('protocol') or 'unknown' }}"
+  # Hours and minutes read better than 7412 seconds, and a session under a
+  # minute reads better as seconds than as "0 minutes".
+  spent: >-
+    {% if seconds >= 3600 %}
+      {{ seconds // 3600 }} h {{ (seconds % 3600) // 60 }} min
+    {% elif seconds >= 60 %}
+      {{ seconds // 60 }} min
+    {% else %}
+      {{ seconds }} s
+    {% endif %}
+  message: >-
+    {{ trigger.to_state.name }}: {{ energy }} Wh in {{ spent | trim }},
+    peaking at {{ peak }} W over {{ protocol }}.
+
+actions: !input notification
