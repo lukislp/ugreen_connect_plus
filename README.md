@@ -373,8 +373,11 @@ actually want from a charger: being told when something has finished.
 
 [![Import the blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Flukislp%2Fugreen_connect_plus%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fugreen_connect_plus%2Fcharging_finished.yaml)
 
-Pick a port's charging event entity and a notification service; the message
-carries how much went in, how long it took, the peak and the protocol.
+Pick a port's charging event entity and how you want to be told — the default
+posts a notification in Home Assistant itself, and the picker offers everything
+else. The message carries how much went in, how long it took, the peak and the
+protocol; it is also available as `{{ message }}` if you would rather write your
+own.
 
 It exists because the interesting part is not the notification but the
 decision. A full phone still reports the charger's 0.1 A measurement quantum,

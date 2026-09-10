@@ -26,14 +26,24 @@ blueprint:
           filter:
             - integration: ugreen_connect_plus
               domain: event
-    notify_service:
-      name: Notification service
+    notification:
+      name: How to tell you
       description: >-
-        Which notify service to send through, without the `notify.` in front —
-        `mobile_app_pixel_9`, or `persistent_notification`.
-      default: persistent_notification
+        What to do when a port finishes. The default posts a notification in
+        Home Assistant itself; pick your phone, a speaker or anything else
+        instead.
+
+
+        `{{ message }}` is the sentence this blueprint composes, and
+        `{{ title }}` the heading. `{{ energy }}`, `{{ spent }}`, `{{ peak }}`
+        and `{{ protocol }}` are there too, if you would rather write your own.
+      default:
+        - action: persistent_notification.create
+          data:
+            title: "{{ title }}"
+            message: "{{ message }}"
       selector:
-        text:
+        action: {}
     title:
       name: Title
       default: Charging finished
@@ -72,7 +82,7 @@ conditions:
 
 variables:
   minimum_energy: !input minimum_energy
-  notify_service: !input notify_service
+  title: !input title
   energy: "{{ trigger.to_state.attributes.energy_wh | float(0) | round(1) }}"
   seconds: "{{ trigger.to_state.attributes.duration | int(0) }}"
   peak: "{{ trigger.to_state.attributes.peak_power | float(0) | round(1) }}"
@@ -87,11 +97,8 @@ variables:
     {% else %}
       {{ seconds }} s
     {% endif %}
+  message: >-
+    {{ trigger.to_state.name }}: {{ energy }} Wh in {{ spent | trim }},
+    peaking at {{ peak }} W over {{ protocol }}.
 
-actions:
-  - action: "notify.{{ notify_service }}"
-    data:
-      title: !input title
-      message: >-
-        {{ trigger.to_state.name }}: {{ energy }} Wh in {{ spent | trim }},
-        peaking at {{ peak }} W over {{ protocol }}.
+actions: !input notification
