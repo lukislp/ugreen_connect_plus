@@ -1,3 +1,10 @@
+## [0.26.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.26.0...v0.26.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* name this integration the way Home Assistant does ([4247fad](https://github.com/lukislp/ugreen_connect_plus/commit/4247fad4b3e0e79a59e37de2b368265c22526447))
+
 # [0.26.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.25.0...v0.26.0) (2026-09-10)
 
 
