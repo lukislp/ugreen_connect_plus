@@ -1,3 +1,10 @@
+# [0.26.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.25.0...v0.26.0) (2026-09-10)
+
+
+### Features
+
+* read the 160W's screen, and say which of it may be set ([2f2d9a5](https://github.com/lukislp/ugreen_connect_plus/commit/2f2d9a5e63b15b7367124398b38096e12c3930e5))
+
 # [0.25.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.24.1...v0.25.0) (2026-09-10)
 
 
