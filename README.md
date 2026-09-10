@@ -366,6 +366,29 @@ UGREEN's own storage (`upload-pre-info` → presigned `PUT` → `wallPaper/save`
 the charger is then handed the resulting id and URL through a `PIC_data`
 property, which is what makes it download the file.
 
+## Blueprint
+
+An automation blueprint ships with the integration, for the thing people
+actually want from a charger: being told when something has finished.
+
+[![Import the blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Flukislp%2Fugreen_connect_plus%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fugreen_connect_plus%2Fcharging_finished.yaml)
+
+Pick a port's charging event entity and a notification service; the message
+carries how much went in, how long it took, the peak and the protocol.
+
+It exists because the interesting part is not the notification but the
+decision. A full phone still reports the charger's 0.1 A measurement quantum,
+and a bare cable produces a stray current the charger itself rounds to 0 W, so
+"has it finished" written as a template threshold either announces a laptop
+that is still charging or misses one that finished an hour ago. The integration
+has to settle that question for its own session tracking, and the event entity
+publishes the answer — the blueprint just listens for it.
+
+A port that pauses and draws again is one session rather than several, so this
+fires once at the end rather than at every dip. There is a floor on the energy,
+because plugging a cable in and straight out again is a real session and not
+worth a notification.
+
 ## Settings
 
 *Settings → Devices & Services → UGREEN Connect Plus → the cog on the account row*:

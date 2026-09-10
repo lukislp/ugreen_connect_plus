@@ -1,0 +1,97 @@
+blueprint:
+  name: UGREEN charger — say when a port has finished
+  description: >-
+    Sends a notification when a port stops charging, with how much went in and
+    how long it took.
+
+
+    The integration decides what "finished" means, which is the point of using
+    this rather than a template: a full phone still reports the charger's 0.1 A
+    measurement quantum, and a bare cable produces a stray current the charger
+    itself rounds to 0 W. A threshold written by hand either announces a laptop
+    that is still charging or misses one that finished an hour ago.
+
+
+    A port that sits idle for a while and then draws again — a phone topping
+    itself up at 100%, a battery dock between sips — is one charging session,
+    not several, so this fires once at the end rather than at every pause.
+  domain: automation
+  source_url: https://github.com/lukislp/ugreen_connect_plus/blob/main/blueprints/automation/ugreen_connect_plus/charging_finished.yaml
+  input:
+    port:
+      name: Port
+      description: The charging event entity of the port to watch.
+      selector:
+        entity:
+          filter:
+            - integration: ugreen_connect_plus
+              domain: event
+    notify_service:
+      name: Notification service
+      description: >-
+        Which notify service to send through, without the `notify.` in front —
+        `mobile_app_pixel_9`, or `persistent_notification`.
+      default: persistent_notification
+      selector:
+        text:
+    title:
+      name: Title
+      default: Charging finished
+      selector:
+        text:
+    minimum_energy:
+      name: Ignore anything smaller than
+      description: >-
+        Sessions below this are not worth a notification: plugging a cable in
+        and out again registers as a very short one.
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: Wh
+          mode: box
+
+mode: parallel
+max_exceeded: silent
+
+# An event entity's state is the timestamp of its last event, so every event
+# is a state change even when two of the same kind follow each other. Which
+# kind it was is an attribute, and that is what the condition reads -- watching
+# the attribute for a change would miss a second `ended` in a row.
+triggers:
+  - trigger: state
+    entity_id: !input port
+
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.to_state is not none
+         and trigger.to_state.attributes.get('event_type') == 'ended'
+         and (trigger.to_state.attributes.get('energy_wh') | float(0)) >= minimum_energy }}
+
+variables:
+  minimum_energy: !input minimum_energy
+  notify_service: !input notify_service
+  energy: "{{ trigger.to_state.attributes.energy_wh | float(0) | round(1) }}"
+  seconds: "{{ trigger.to_state.attributes.duration | int(0) }}"
+  peak: "{{ trigger.to_state.attributes.peak_power | float(0) | round(1) }}"
+  protocol: "{{ trigger.to_state.attributes.protocol | default('unknown') }}"
+  # Hours and minutes read better than 7412 seconds, and a session under a
+  # minute reads better as seconds than as "0 minutes".
+  spent: >-
+    {% if seconds >= 3600 %}
+      {{ seconds // 3600 }} h {{ (seconds % 3600) // 60 }} min
+    {% elif seconds >= 60 %}
+      {{ seconds // 60 }} min
+    {% else %}
+      {{ seconds }} s
+    {% endif %}
+
+actions:
+  - action: "notify.{{ notify_service }}"
+    data:
+      title: !input title
+      message: >-
+        {{ trigger.to_state.name }}: {{ energy }} Wh in {{ spent | trim }},
+        peaking at {{ peak }} W over {{ protocol }}.
