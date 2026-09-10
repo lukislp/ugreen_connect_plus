@@ -42,32 +42,67 @@ PORTS_BY_MODEL: Final[dict[str, tuple[str, ...]]] = {
 # The name the rest of the integration knew this list by.
 X783_PORTS: Final[tuple[str, ...]] = PORTS_BY_MODEL["X783"]
 
-# Models whose GET_DEVICE_STATE reply has been read on real hardware.
+# Which fields of the GET_DEVICE_STATE reply have been read on real hardware,
+# per model.
 #
-# Deliberately not the same list as the one above, and the difference is the
+# Deliberately not the same list as the ports above, and the difference is the
 # point. How many ports a report describes can be counted from its length, so
 # readings work anywhere. Where brightness, the screen timeout, the charging
-# mode and the screensaver sit in the state reply cannot be counted -- they are
-# offsets, established by writing a value through the app and watching which
-# byte moved. On a model whose reply is laid out differently they would read
-# something plausible and wrong, and these are the entities that write back.
+# mode and the screensaver sit cannot be counted -- they are offsets,
+# established by changing a value in the app and watching which byte moved. On
+# a model laid out differently they would read something plausible and wrong,
+# and every one of these entities writes back as well as reads.
 #
-# So a model here gets its screen; a model that is merely named above gets its
-# readings. X776's ports are confirmed, and that says nothing at all about
-# where its screen settings live -- or whether it has a screen to settle. Only
-# a state reply read off one could put it here.
-STATE_VERIFIED: Final[frozenset[str]] = frozenset({"X783"})
+# Per field rather than per model, because a model does not arrive understood
+# all at once. The X776's owner mapped its brightness and its screen timeout by
+# hand and found them at the same offsets as the X783's; the rest of its
+# 59-byte reply is arranged differently and is still being worked out. Under an
+# all-or-nothing rule that knowledge would have to sit unused until the last
+# byte fell, which is a poor trade for the owner of that charger.
+STATE_FIELDS_ALL: Final[frozenset[str]] = frozenset(
+    {
+        "brightness",
+        "sleep_time",
+        "charging_mode",
+        "custom",
+        "screensaver",
+        "screensaver_theme",
+        "screensaver_flag",
+        "wallpaper",
+        "wallpapers",
+    }
+)
+
+STATE_FIELDS_BY_MODEL: Final[dict[str, frozenset[str]]] = {
+    "X783": STATE_FIELDS_ALL,
+    # Confirmed on a live 160W by its owner, one change at a time:
+    # https://github.com/s1mptom/ugreen_connect/issues/2 -- brightness moved
+    # from 0x64 to 0x14 at offset 2, the timeout from 0x01 to 0x05 at offset 3.
+    # Nothing else about that reply is settled yet.
+    "X776": frozenset({"brightness", "sleep_time"}),
+}
+
+
+def state_fields(model: str | None) -> frozenset[str]:
+    """Which parts of a state reply may be believed on this model.
+
+    A charger whose model the account API would not name is read in full, as it
+    always has been: that is the charger this was written on far more often
+    than it is a stranger, and the alternative is an integration that loses its
+    screen the moment one cloud call fails.
+    """
+    if model is None:
+        return STATE_FIELDS_ALL
+    return STATE_FIELDS_BY_MODEL.get(model, frozenset())
 
 
 def state_is_readable(model: str | None) -> bool:
-    """Whether this model's state reply can be trusted to mean what it says.
+    """Whether any of this model's state reply can be trusted to mean what it says.
 
-    An unknown model -- ``None``, because the account API did not answer with
-    one -- is read as before rather than refused: on the charger this was
-    written for, a failed product lookup should not take the screen away.
-    Refusal needs positive evidence that the charger is a different one.
+    Refusal needs positive evidence that the charger is a different one, which
+    is why an unknown model is still read in full rather than refused.
     """
-    return model is None or model in STATE_VERIFIED
+    return bool(state_fields(model))
 
 
 def ports_for(model: str | None, body_length: int) -> tuple[str, ...]:
@@ -257,11 +292,12 @@ def parse_custom_mode(
     watching it go -- which is how "no custom mode configured" is told apart
     from a configured one that merely happens to be idle.
     """
-    if not state_is_readable(model):
+    if "custom" not in state_fields(model):
         # Five plain wattages, a shared pair counted in steps, then a mask
         # each: that shape is the X783's, and another model's ports do not
-        # divide the same way. Guessing would put numbers on a page that mean
-        # nothing, which is worse than showing none.
+        # divide the same way -- the 160W's block repeats a seven-byte group
+        # instead. Guessing would put numbers on a page that mean nothing,
+        # which is worse than showing none.
         return None
     if len(body) < STATE_CUSTOM_END:
         return None
