@@ -69,7 +69,7 @@ from .protocol import (
     frame_body,
     parse_custom_mode,
     parse_power_frame,
-    state_is_readable,
+    state_fields,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -332,7 +332,8 @@ class RtcxClient:
         Byte offsets were established by writing a distinctive value and reading
         it back on a real charger, not by guessing.
         """
-        if not state_is_readable(model):
+        fields = state_fields(model)
+        if not fields:
             # The screen settings are offsets rather than a countable layout,
             # and they are written back as well as read. On a charger whose
             # reply has never been seen, none of them appears at all -- which
@@ -354,7 +355,7 @@ class RtcxClient:
             for i in range(count)
             if len(body) >= start + IMAGE_ID_LEN * (i + 1)
         ]
-        return {
+        state = {
             "brightness": body[STATE_BRIGHTNESS],
             "sleep_time": body[STATE_SLEEP_TIME],
             "charging_mode": CHARGING_MODES.get(body[STATE_CHARGING_MODE]),
@@ -368,6 +369,11 @@ class RtcxClient:
             ),
             "wallpapers": wallpapers,
         }
+        # A model is understood a field at a time. Everything not yet confirmed
+        # on this one is dropped here rather than published as a plausible
+        # number, and the entities that would have carried it simply never
+        # appear.
+        return {name: value for name, value in state.items() if name in fields}
 
     def state_is_stale(self, iot_id: str) -> bool:
         """Whether this charger has been written to since its state was read."""

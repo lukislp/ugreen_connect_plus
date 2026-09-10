@@ -38,7 +38,7 @@ from .const import (
 
 # Straight from the protocol module rather than through rtcx: a name
 # re-exported by a module that does not use it is one a linter will remove.
-from .protocol import PORTS_BY_MODEL, QUERY_GET_WIFI_SSID, STATE_VERIFIED
+from .protocol import PORTS_BY_MODEL, QUERY_GET_WIFI_SSID, STATE_FIELDS_ALL, state_fields
 from .rtcx import RtcxClient
 from .session import MAX_GAP, SessionTracker
 
@@ -367,7 +367,7 @@ class UgreenCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if model is None or key in self._noted:
             return
         self._noted.add(key)
-        if model in PORTS_BY_MODEL and model in STATE_VERIFIED:
+        if model in PORTS_BY_MODEL and state_fields(model) == STATE_FIELDS_ALL:
             return
         if model in PORTS_BY_MODEL:
             _LOGGER.warning(

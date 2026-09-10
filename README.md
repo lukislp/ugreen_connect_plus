@@ -73,7 +73,7 @@ The fixes were offered upstream first, as
 | Model | Readings | Port names | Screen settings | Custom mode |
 | --- | --- | --- | --- | --- |
 | **X783** — Nexode Pro 300W, 8-port | yes | yes | yes | yes |
-| **X776** — Nexode Pro 160W | yes | yes | no | no |
+| **X776** — Nexode Pro 160W | yes | yes | brightness, screen-off time | no |
 | anything else | yes, numbered `P1`… | no | no | no |
 
 Readings work on any of them, because how many ports a charger has can be
@@ -88,8 +88,12 @@ plugged into the built-in cable and into C2, and the raw frames showed those
 two slots carrying voltage and the other two at rest. Its readings are
 regression-tested against those frames.
 
-The **screen settings** — brightness, screen-off time, charging mode,
-screensaver, wallpaper — are byte offsets in the state reply, each established
+The **screen settings** are taken one field at a time rather than one model
+at a time: the X776's brightness and screen-off time were mapped on a live one
+and sit where the X783's do, while the rest of its reply is arranged
+differently and is not claimed. Each of them — brightness, screen-off time,
+charging mode, screensaver, wallpaper — is a byte offset in the state reply,
+established
 by setting a value in the app and watching which byte moved. On a charger
 whose reply is laid out differently they would read something plausible and
 wrong, and they write back as well as read. So they appear only for a model

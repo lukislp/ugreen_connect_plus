@@ -213,17 +213,25 @@ def test_the_state_reply_is_only_read_where_it_has_been_seen():
     # or the screensaver sit in the state reply is an offset, established on
     # one charger, and those entities write back -- so a model that is merely
     # named is not the same as one that has been read.
-    assert p.state_is_readable("X783")
-    assert not p.state_is_readable("X776")   # named above, never read
-    assert not p.state_is_readable("X999")
+    assert p.state_fields("X783") == p.STATE_FIELDS_ALL
+    assert p.state_fields("X999") == frozenset()
     # No answer from the account API is not evidence of a different charger,
     # and taking the screen away on a failed lookup would be its own fault.
-    assert p.state_is_readable(None)
+    assert p.state_fields(None) == p.STATE_FIELDS_ALL
+
+
+def test_a_model_can_be_understood_a_field_at_a_time():
+    # The 160W's brightness and screen timeout were mapped by hand and sit
+    # where the 300W's do; the rest of its reply is laid out differently and
+    # is not claimed.
+    fields = p.state_fields("X776")
+    assert fields == {"brightness", "sleep_time"}
+    assert "screensaver" not in fields and "charging_mode" not in fields
 
 
 def test_a_model_can_be_named_without_its_screen_being_understood():
     assert "X776" in p.PORTS_BY_MODEL
-    assert "X776" not in p.STATE_VERIFIED
+    assert p.state_fields("X776") != p.STATE_FIELDS_ALL
 
 
 # --- a second model, from its owner's charger ------------------------------
@@ -267,6 +275,9 @@ def test_the_160w_is_read_even_by_a_version_that_has_never_heard_of_it():
     assert ports["P1"] == p.parse_power_frame(X776_FRAME, "X776")["C-Cable"]
 
 
-def test_the_160w_screen_is_still_not_guessed_at():
-    # Ports confirmed, state offsets not -- and the custom block writes back.
-    assert p.state_is_readable("X776") is False
+def test_the_160w_custom_mode_is_still_not_guessed_at():
+    # Its brightness and timeout are confirmed; its parameter block repeats a
+    # seven-byte group and is nothing like the 300W's, so it stays unclaimed --
+    # and that block is the one that writes six values at once.
+    assert "custom" not in p.state_fields("X776")
+    assert p.parse_custom_mode(bytes(60), "X776") is None
