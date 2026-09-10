@@ -94,7 +94,11 @@ class RtcxClient:
         # diagnostics download: on a model nobody here has, the decoded values
         # are only as good as the offsets, and the bytes are what someone else
         # can check them against.
-        self.last_frames: dict[str, str] = {}
+        # The last raw frame of each question asked, per charger. Keyed by the
+        # device rather than globally: with two chargers on one account the
+        # frames would otherwise be whichever was asked last, and a diagnostics
+        # download for one would carry the other's bytes.
+        self.last_frames: dict[str, dict[str, str]] = {}
         # Chargers whose state reply is no longer what we last read, because
         # something here has written to them since.
         self._state_dirty: set[str] = set()
@@ -273,7 +277,8 @@ class RtcxClient:
                 for name, entries in prop_map.items()
             }
             if value and frame_body(value, frame_type, cmd) is not None:
-                self.last_frames[f"{frame_type:02X}/{cmd}"] = value
+                seen = self.last_frames.setdefault(iot_id, {})
+                seen[f"{frame_type:02X}/{cmd}"] = value
                 return value
             _LOGGER.debug(
                 "PT_data is not the reply to 0x%02X/%d yet (try %d)",
