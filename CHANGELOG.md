@@ -1,3 +1,17 @@
+# [0.27.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.26.1...v0.27.0) (2026-09-10)
+
+
+### Bug Fixes
+
+* let people pick how they are told, rather than type it ([1c73101](https://github.com/lukislp/ugreen_connect_plus/commit/1c7310170274530a1d576d561622313f65ef4b90))
+* reach for the event's figures rather than naming them ([190e0f5](https://github.com/lukislp/ugreen_connect_plus/commit/190e0f5a50ce5e6aa78fd1cff9b02c66d77b82d6))
+
+
+### Features
+
+* answer for one charger when the question was about one charger ([5dd601e](https://github.com/lukislp/ugreen_connect_plus/commit/5dd601e7a2cf1d493709ae3254ced8866d7a4baa))
+* ship a blueprint for "tell me when it has finished" ([37e24cd](https://github.com/lukislp/ugreen_connect_plus/commit/37e24cd139a3b0dd754ceb913afa0e4c31c26f95))
+
 ## [0.26.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.26.0...v0.26.1) (2026-09-10)
 
 

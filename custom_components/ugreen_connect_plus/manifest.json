@@ -16,5 +16,5 @@
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/lukislp/ugreen_connect_plus/issues",
-  "version": "0.26.1"
+  "version": "0.27.0"
 }
