@@ -73,7 +73,7 @@ The fixes were offered upstream first, as
 | Model | Readings | Port names | Screen settings | Custom mode |
 | --- | --- | --- | --- | --- |
 | **X783** — Nexode Pro 300W, 8-port | yes | yes | yes | yes |
-| **X776** — Nexode Pro 160W | yes | yes | brightness, screen-off time | no |
+| **X776** — Nexode Pro 160W | yes | yes | most, some read-only | no |
 | anything else | yes, numbered `P1`… | no | no | no |
 
 Readings work on any of them, because how many ports a charger has can be
@@ -88,10 +88,19 @@ plugged into the built-in cable and into C2, and the raw frames showed those
 two slots carrying voltage and the other two at rest. Its readings are
 regression-tested against those frames.
 
-The **screen settings** are taken one field at a time rather than one model
-at a time: the X776's brightness and screen-off time were mapped on a live one
-and sit where the X783's do, while the rest of its reply is arranged
-differently and is not claimed. Each of them — brightness, screen-off time,
+The **screen settings** are taken one field at a time rather than one model at
+a time. The X776's were mapped on a live one, a single change at a time:
+brightness, the screen timeout and the charging mode sit exactly where the
+X783's do, and the screensaver, clock style, time format and current wallpaper
+follow nine bytes earlier, because the parameter block between them is shorter.
+Its wallpaper *library* is not claimed — the byte where the X783 counts one
+reads 5 there whether three pictures follow or four.
+
+Reading a field is not permission to write it. Brightness is set by a command
+carrying one byte, so knowing where to read it is knowing how to set it; the
+charging mode's command carries the whole parameter block, whose length differs
+between models. Fields in that position are shown and refuse to be set, with a
+message saying so, rather than being hidden or written on a guess. Each of them — brightness, screen-off time,
 charging mode, screensaver, wallpaper — is a byte offset in the state reply,
 established
 by setting a value in the app and watching which byte moved. On a charger

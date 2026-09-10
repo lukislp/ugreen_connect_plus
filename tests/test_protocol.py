@@ -225,8 +225,11 @@ def test_a_model_can_be_understood_a_field_at_a_time():
     # where the 300W's do; the rest of its reply is laid out differently and
     # is not claimed.
     fields = p.state_fields("X776")
-    assert fields == {"brightness", "sleep_time"}
-    assert "screensaver" not in fields and "charging_mode" not in fields
+    # Mapped one change at a time on a live one; the library list is not in
+    # there because the byte that should count it does not.
+    assert "brightness" in fields and "charging_mode" in fields
+    assert "screensaver" in fields and "wallpaper" in fields
+    assert "wallpapers" not in fields and "custom" not in fields
 
 
 def test_a_model_can_be_named_without_its_screen_being_understood():
@@ -281,3 +284,34 @@ def test_the_160w_custom_mode_is_still_not_guessed_at():
     # and that block is the one that writes six values at once.
     assert "custom" not in p.state_fields("X776")
     assert p.parse_custom_mode(bytes(60), "X776") is None
+
+
+def test_the_tail_moves_with_the_parameter_block():
+    # The 160W's block is 26 bytes where the 300W's is 35, so everything after
+    # it sits nine bytes earlier. Measured on one, not derived.
+    x783, x776 = p.state_layout("X783"), p.state_layout("X776")
+    assert (x783.screensaver, x783.image_id) == (40, 43)
+    assert (x776.screensaver, x776.image_id) == (31, 34)
+    assert x783.screensaver - x776.screensaver == 9
+
+
+def test_a_count_nobody_has_watched_counting_is_not_read():
+    assert p.state_layout("X783").wallpaper_count == 49
+    assert p.state_layout("X776").wallpaper_count is None
+
+
+def test_an_unknown_model_is_read_where_the_first_one_was():
+    # A charger the account API would not name is far more often the one this
+    # was written on than a stranger.
+    assert p.state_layout("X999") == p.state_layout("X783")
+
+
+def test_reading_a_field_is_not_permission_to_write_it():
+    # Brightness is one byte and its command carries one byte. The charging
+    # mode's command carries the whole parameter block, which is a different
+    # length on the 160W -- so it is shown there and not set.
+    assert "charging_mode" in p.state_fields("X776")
+    assert "charging_mode" not in p.state_writable("X776")
+    assert "brightness" in p.state_writable("X776")
+    assert p.state_writable("X783") == p.STATE_FIELDS_ALL
+    assert p.state_writable("X999") == frozenset()

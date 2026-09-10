@@ -118,6 +118,7 @@ class UgreenChargingMode(UgreenDeviceEntity, SelectEntity):
         iot_id = self._iot_id
         if not iot_id or option not in MODE_VALUE:
             return
+        self._require_writable("charging_mode")
         with cloud_errors():
             await self.coordinator.rtcx.async_set_charging_mode(iot_id, MODE_VALUE[option])
             await self.coordinator.async_read_back(self._key, iot_id)
@@ -184,6 +185,7 @@ class UgreenWallpaper(UgreenDeviceEntity, SelectEntity):
         iot_id = self._iot_id
         if not iot_id:
             return
+        self._require_writable("wallpaper")
         wallpaper = None if option == self.NONE else option
 
         # A picture the charger has never downloaded has to be handed over
@@ -228,6 +230,9 @@ class _UgreenScreensaverOption(UgreenDeviceEntity, SelectEntity):
         iot_id = self._iot_id
         if not iot_id:
             return
+        self._require_writable(
+            "screensaver_theme" if theme is not None else "screensaver_flag"
+        )
         with cloud_errors():
             await self.coordinator.rtcx.async_set_screensaver(
                 iot_id,
@@ -317,6 +322,7 @@ class UgreenSleepTime(UgreenDeviceEntity, SelectEntity):
         iot_id = self._iot_id
         if not iot_id or option not in SLEEP_OPTIONS:
             return
+        self._require_writable("sleep_time")
         with cloud_errors():
             await self.coordinator.rtcx.async_set_sleep_time(iot_id, SLEEP_OPTIONS[option])
             await self.coordinator.async_read_back(self._key, iot_id)

@@ -18,7 +18,7 @@ them here rather than beside the transport worth the separate module.
 from __future__ import annotations
 
 import logging
-from typing import Any, Final
+from typing import Any, Final, NamedTuple
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,12 +75,76 @@ STATE_FIELDS_ALL: Final[frozenset[str]] = frozenset(
 
 STATE_FIELDS_BY_MODEL: Final[dict[str, frozenset[str]]] = {
     "X783": STATE_FIELDS_ALL,
-    # Confirmed on a live 160W by its owner, one change at a time:
-    # https://github.com/s1mptom/ugreen_connect/issues/2 -- brightness moved
-    # from 0x64 to 0x14 at offset 2, the timeout from 0x01 to 0x05 at offset 3.
-    # Nothing else about that reply is settled yet.
+    # Mapped on a live 160W by its owner, one change at a time, in
+    # https://github.com/s1mptom/ugreen_connect/issues/2. Brightness, the
+    # timeout and the charging mode sit exactly where the X783 keeps them; the
+    # screensaver group and the wallpaper follow nine bytes earlier, because
+    # the parameter block between them is 26 bytes rather than 35.
+    #
+    # `wallpapers` is missing on purpose. The byte where the X783 counts its
+    # library reads 5 on that charger whether three ids follow or four, so
+    # whatever it counts, it is not them.
+    "X776": frozenset(
+        {
+            "brightness",
+            "sleep_time",
+            "charging_mode",
+            "screensaver",
+            "screensaver_theme",
+            "screensaver_flag",
+            "wallpaper",
+        }
+    ),
+}
+
+# Reading a byte and writing it are separate permissions, because the commands
+# are not symmetrical. Brightness and the screen timeout are set by a command
+# carrying one byte, so knowing where to read them is knowing how to set them.
+# The charging mode is not: its command carries the whole parameter block, and
+# the 160W's block is nine bytes shorter than the one that shape was learned
+# on. The screensaver's command carries a block of its own.
+#
+# So a field is writable where a write has actually been made and read back.
+# Everything else can be shown and not set, which is a better answer than
+# either hiding it or sending a frame nobody has tried.
+STATE_WRITABLE_BY_MODEL: Final[dict[str, frozenset[str]]] = {
+    "X783": STATE_FIELDS_ALL,
     "X776": frozenset({"brightness", "sleep_time"}),
 }
+
+
+class StateLayout(NamedTuple):
+    """Where the tail of a state reply sits on one model.
+
+    Brightness, the screen timeout and the charging mode are at 2, 3 and 4 on
+    both chargers seen so far, so they stay constants. Everything after the
+    custom parameter block moves with its length, which is what this carries.
+    ``wallpaper_count`` is None where that byte has been seen and not
+    understood -- reading a list from a count that does not count is worse than
+    publishing no list.
+    """
+
+    screensaver: int          # then clock style at +1 and time format at +2
+    image_id: int             # six ASCII bytes naming the picture on screen
+    wallpaper_count: int | None
+
+
+STATE_LAYOUT_BY_MODEL: Final[dict[str, StateLayout]] = {
+    "X783": StateLayout(screensaver=40, image_id=43, wallpaper_count=49),
+    "X776": StateLayout(screensaver=31, image_id=34, wallpaper_count=None),
+}
+
+
+def state_layout(model: str | None) -> StateLayout:
+    """Where to read this model's screen settings; the X783's where unknown."""
+    return STATE_LAYOUT_BY_MODEL.get(model or "", STATE_LAYOUT_BY_MODEL["X783"])
+
+
+def state_writable(model: str | None) -> frozenset[str]:
+    """Which of this model's state fields may be set as well as read."""
+    if model is None:
+        return STATE_FIELDS_ALL
+    return STATE_WRITABLE_BY_MODEL.get(model, frozenset())
 
 
 def state_fields(model: str | None) -> frozenset[str]:
