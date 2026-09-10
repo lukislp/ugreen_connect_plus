@@ -7,8 +7,11 @@ from typing import Any
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntry
 
 from . import UgreenConfigEntry
+from .const import DOMAIN
+from .coordinator import device_key
 from .protocol import FRAME_QUERY, QUERY_GET_WIFI_SSID
 
 # The README asks people to attach this file to a public issue, so the bar is
@@ -52,6 +55,68 @@ def _stand_ins(data: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _frames(coordinator: Any, iot_id: str | None) -> dict[str, str]:
+    """The frames seen for one charger, minus the one that names a network.
+
+    The SSID reply carries the household's Wi-Fi name as plain ASCII inside the
+    bytes, where redaction by key name cannot reach it. Every other frame is
+    worth reading byte by byte; that one holds nothing a charger could be
+    debugged with.
+    """
+    if iot_id is None:
+        return {}
+    seen = coordinator.rtcx.last_frames.get(iot_id) or {}
+    return {name: value for name, value in seen.items() if name != SSID_FRAME}
+
+
+def _charger_for(coordinator: Any, device: DeviceEntry) -> str | None:
+    """Which charger this Home Assistant device belongs to.
+
+    A port is a device of its own when the owner has asked for that, and its
+    identifier is the charger's with the port appended -- so a diagnostics
+    download taken from a port page answers about the charger behind it, which
+    is the only thing that has frames.
+    """
+    for entry in coordinator.data.get("devices") or []:
+        key = device_key(entry)
+        if key is None:
+            continue
+        if any(
+            domain == DOMAIN and (value == key or value.startswith(f"{key}_"))
+            for domain, value in device.identifiers
+        ):
+            return key
+    return None
+
+
+async def async_get_device_diagnostics(
+    hass: HomeAssistant, entry: UgreenConfigEntry, device: DeviceEntry
+) -> dict[str, Any]:
+    """The same, for one charger rather than for the whole account.
+
+    Someone with two chargers reporting a problem with one of them should not
+    have to hand over the other, and whoever reads it should not have to work
+    out which half is relevant.
+    """
+    coordinator = entry.runtime_data
+    raw = coordinator.data or {}
+    key = _charger_for(coordinator, device)
+    if key is None:
+        return {"error": "this device does not belong to a charger in the account"}
+
+    listed = next(
+        (d for d in raw.get("devices") or [] if device_key(d) == key), {}
+    )
+    iot_id = (listed.get("extra") or {}).get("iotId")
+    return {
+        "device": async_redact_data(listed, TO_REDACT),
+        "detail": async_redact_data((raw.get("detail") or {}).get(key) or {}, TO_REDACT),
+        "reading": async_redact_data((raw.get("power") or {}).get(key) or {}, TO_REDACT),
+        "error": (raw.get("power_errors") or {}).get(key),
+        "frames": _frames(coordinator, iot_id),
+    }
+
+
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: UgreenConfigEntry
 ) -> dict[str, Any]:
@@ -65,14 +130,19 @@ async def async_get_config_entry_diagnostics(
     return {
         "entry": async_redact_data(dict(entry.data), TO_REDACT),
         "data": data,
-        # The raw frames behind the readings above, keyed by the question that
-        # was asked. On a charger this integration has never seen, the decoded
-        # values are only as good as offsets established on a different one --
-        # these bytes are what someone else can check them against, and what
-        # turns "my ports are called P1" into a model in the table.
+        # The raw frames behind the readings above, per charger and keyed by
+        # the question that was asked. On a charger this integration has never
+        # seen, the decoded values are only as good as offsets established on a
+        # different one -- these bytes are what someone else can check them
+        # against, and what turns "my ports are called P1" into a model in the
+        # table.
         "frames": {
-            name: value
-            for name, value in coordinator.rtcx.last_frames.items()
-            if name != SSID_FRAME
+            names.get(key, key): _frames(
+                coordinator, ((listed.get("extra") or {}).get("iotId"))
+            )
+            for key, listed in (
+                (device_key(d), d) for d in (coordinator.data or {}).get("devices") or []
+            )
+            if key is not None
         },
     }
