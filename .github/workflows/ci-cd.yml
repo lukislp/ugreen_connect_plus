@@ -85,6 +85,23 @@ jobs:
   # -------------------------------------------------------------------------
   # Release -- pushes to main only, and only when the commits ask for one
   # -------------------------------------------------------------------------
+  test-integration:
+    name: Home Assistant layer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      # These start the integration for real, with only the two cloud clients
+      # replaced, so they catch what the Home-Assistant-free suite cannot: a
+      # module that no longer imports, a platform that fails to set up, an
+      # entity that never appears.
+      - run: pip install pytest-homeassistant-custom-component
+      # `addopts` in pytest.ini names that plugin out, because the other suite
+      # must not have it. Here it is the point.
+      - run: pytest tests_ha -q -o addopts=""
+
   get-version:
     name: Is a release due
     needs: [test-hacs-validation, test-hassfest, test-lint, test-unit]
