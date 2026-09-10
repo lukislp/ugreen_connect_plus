@@ -67,6 +67,7 @@ class UgreenBrightness(UgreenDeviceEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         if not (iot_id := self._iot_id):
             return
+        self._require_writable("brightness")
         with cloud_errors():
             await self.coordinator.rtcx.async_set_brightness(iot_id, int(value))
             await self.coordinator.async_read_back(self._key, iot_id)

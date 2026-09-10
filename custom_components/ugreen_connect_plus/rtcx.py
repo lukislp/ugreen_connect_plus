@@ -61,15 +61,13 @@ from .protocol import (
     SETTING_SET_SLEEP_TIME,
     STATE_BRIGHTNESS,
     STATE_CHARGING_MODE,
-    STATE_IMAGE_ID,
-    STATE_SCREENSAVER,
     STATE_SLEEP_TIME,
-    STATE_WALLPAPER_COUNT,
     build_frame,
     frame_body,
     parse_custom_mode,
     parse_power_frame,
     state_fields,
+    state_layout,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -340,29 +338,34 @@ class RtcxClient:
             # is what leaves its readings working and its screen alone.
             _LOGGER.debug("state reply not read on model %s", model)
             return None
+        layout = state_layout(model)
         value = await self._ask(iot_id, FRAME_QUERY, QUERY_GET_DEVICE_STATE)
         body = frame_body(value, FRAME_QUERY, QUERY_GET_DEVICE_STATE) if value else None
-        if not body or len(body) <= STATE_WALLPAPER_COUNT:
+        if not body or len(body) < layout.image_id + IMAGE_ID_LEN:
             return None
 
-        image = body[STATE_IMAGE_ID : STATE_IMAGE_ID + IMAGE_ID_LEN]
-        count = body[STATE_WALLPAPER_COUNT]
-        start = STATE_WALLPAPER_COUNT + 1
-        wallpapers = [
-            body[start + IMAGE_ID_LEN * i : start + IMAGE_ID_LEN * (i + 1)].decode(
-                "ascii", "replace"
-            )
-            for i in range(count)
-            if len(body) >= start + IMAGE_ID_LEN * (i + 1)
-        ]
+        image = body[layout.image_id : layout.image_id + IMAGE_ID_LEN]
+        # A count byte nobody has watched counting is not read at all: the
+        # 160W's reads 5 whether three ids follow or four.
+        wallpapers: list[str] = []
+        if layout.wallpaper_count is not None and len(body) > layout.wallpaper_count:
+            count = body[layout.wallpaper_count]
+            start = layout.wallpaper_count + 1
+            wallpapers = [
+                body[start + IMAGE_ID_LEN * i : start + IMAGE_ID_LEN * (i + 1)].decode(
+                    "ascii", "replace"
+                )
+                for i in range(count)
+                if len(body) >= start + IMAGE_ID_LEN * (i + 1)
+            ]
         state = {
             "brightness": body[STATE_BRIGHTNESS],
             "sleep_time": body[STATE_SLEEP_TIME],
             "charging_mode": CHARGING_MODES.get(body[STATE_CHARGING_MODE]),
             "custom": parse_custom_mode(body, model),
-            "screensaver": bool(body[STATE_SCREENSAVER]),
-            "screensaver_theme": body[STATE_SCREENSAVER + 1],
-            "screensaver_flag": body[STATE_SCREENSAVER + 2],
+            "screensaver": bool(body[layout.screensaver]),
+            "screensaver_theme": body[layout.screensaver + 1],
+            "screensaver_flag": body[layout.screensaver + 2],
             # All-0xFF is how "no picture" is spelled.
             "wallpaper": None if image == b"\xff" * IMAGE_ID_LEN else image.decode(
                 "ascii", "replace"

@@ -71,6 +71,7 @@ class UgreenScreensaver(UgreenDeviceEntity, SwitchEntity):
         iot_id = self._iot_id
         if not iot_id:
             return
+        self._require_writable("screensaver")
         # The command carries the whole screensaver block, so the theme and the
         # chosen wallpaper have to be sent back unchanged or they get wiped.
         with cloud_errors():
