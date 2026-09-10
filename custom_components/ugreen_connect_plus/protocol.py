@@ -31,9 +31,11 @@ _LOGGER = logging.getLogger(__name__)
 PORTS_BY_MODEL: Final[dict[str, tuple[str, ...]]] = {
     # Read off the app's own port table, and confirmed against a charger.
     "X783": ("C1", "C2", "C3", "C4", "C5", "C6", "A1", "DC"),
-    # Reported for the Nexode Pro 160W, never checked against one -- nobody
-    # here has the hardware. Names that may be wrong on a model we cannot put
-    # on a desk still beat P1..P4, and are easier to correct than to discover.
+    # Nexode Pro 160W, confirmed against one by its owner: devices were put on
+    # the built-in cable and on C2, and records 0 and 2 -- and only those --
+    # carried voltage. Its report is 32 bytes, four records and four protocol
+    # bytes, so the eighth byte the X783 leaves off is that model's quirk
+    # rather than the protocol's habit.
     "X776": ("C-Cable", "C1", "C2", "A"),
 }
 
@@ -51,8 +53,9 @@ X783_PORTS: Final[tuple[str, ...]] = PORTS_BY_MODEL["X783"]
 # something plausible and wrong, and these are the entities that write back.
 #
 # So a model here gets its screen; a model that is merely named above gets its
-# readings. X776's port names came from its owner's report, which says nothing
-# about where its screen settings live -- or whether it has a screen at all.
+# readings. X776's ports are confirmed, and that says nothing at all about
+# where its screen settings live -- or whether it has a screen to settle. Only
+# a state reply read off one could put it here.
 STATE_VERIFIED: Final[frozenset[str]] = frozenset({"X783"})
 
 

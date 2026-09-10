@@ -59,9 +59,9 @@ What it adds on top of 0.17.0:
   the charger's own report rather than from a constant, so a model nobody here
   has ever seen still gets an entity for every port it reports; `productNo`
   supplies the names where they are known and numbers them where they are not.
-  The 160 W X776's names come from its owner's report and have never been
-  checked against one -- nobody here has the hardware. Its custom mode is left
-  alone rather than guessed at: that parameter block's shape is the X783's.
+  The 160 W X776's names were confirmed by its owner against the hardware. Its
+  custom mode is left alone rather than guessed at: that parameter block's
+  shape is the X783's.
 - **A German translation.**
 
 The fixes were offered upstream first, as
@@ -73,7 +73,7 @@ The fixes were offered upstream first, as
 | Model | Readings | Port names | Screen settings | Custom mode |
 | --- | --- | --- | --- | --- |
 | **X783** — Nexode Pro 300W, 8-port | yes | yes | yes | yes |
-| **X776** — Nexode Pro 160W | yes | reported, unverified | no | no |
+| **X776** — Nexode Pro 160W | yes | yes | no | no |
 | anything else | yes, numbered `P1`… | no | no | no |
 
 Readings work on any of them, because how many ports a charger has can be
@@ -82,9 +82,11 @@ and is not guessed at.
 
 Port *names* come from `productNo`, which is what the account API calls the
 model. The X783's were read off the app's own port table and checked against
-the hardware; the X776's come from
-[an owner's report](https://github.com/s1mptom/ugreen_connect/issues/2) and
-have never been seen here.
+the hardware. The X776's were settled the same way, by
+[its owner](https://github.com/s1mptom/ugreen_connect/issues/2): devices were
+plugged into the built-in cable and into C2, and the raw frames showed those
+two slots carrying voltage and the other two at rest. Its readings are
+regression-tested against those frames.
 
 The **screen settings** — brightness, screen-off time, charging mode,
 screensaver, wallpaper — are byte offsets in the state reply, each established
