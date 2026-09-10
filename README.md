@@ -136,9 +136,9 @@ be a way of losing the old data twice.
 
 ## Install
 
-**HACS** → three-dot menu → *Custom repositories* → add `lukislp/ugreen_connect_plus_plus`
+**HACS** → three-dot menu → *Custom repositories* → add `lukislp/ugreen_connect_plus`
 as type *Integration* → install → **restart Home Assistant** → *Settings →
-Devices & Services → Add integration → UGREEN Connect*.
+Devices & Services → Add integration → UGREEN Connect Plus*.
 
 Manual: copy `custom_components/ugreen_connect_plus` into your `config/` and restart.
 
@@ -368,7 +368,7 @@ property, which is what makes it download the file.
 
 ## Settings
 
-*Settings → Devices & Services → UGREEN Connect → the cog on the account row*:
+*Settings → Devices & Services → UGREEN Connect Plus → the cog on the account row*:
 
 <img src="docs/options.png" alt="The options dialog" width="480">
 
@@ -493,7 +493,7 @@ Issues and pull requests are welcome, especially from owners of other UGREEN
 chargers — the port table and the byte offsets in `const.py` and `rtcx.py` are
 specific to the 300W eight-port model and are the first thing another one will
 disagree about. A
-diagnostics download (*Settings → Devices & Services → UGREEN Connect →
+diagnostics download (*Settings → Devices & Services → UGREEN Connect Plus →
 Download diagnostics*) is the most useful thing to attach, because it carries
 the raw frames themselves. It is written to be safe to post in public: the
 account, the charger's serial number and MAC, its cloud id and the Wi-Fi
