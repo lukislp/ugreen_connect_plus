@@ -76,17 +76,21 @@ triggers:
 conditions:
   - condition: template
     value_template: >-
-      {{ trigger.to_state is not none
-         and trigger.to_state.attributes.get('event_type') == 'ended'
-         and (trigger.to_state.attributes.get('energy_wh') | float(0)) >= minimum_energy }}
+      {{ attrs.get('event_type') == 'ended' and energy >= (minimum_energy | float(0)) }}
 
 variables:
   minimum_energy: !input minimum_energy
   title: !input title
-  energy: "{{ trigger.to_state.attributes.energy_wh | float(0) | round(1) }}"
-  seconds: "{{ trigger.to_state.attributes.duration | int(0) }}"
-  peak: "{{ trigger.to_state.attributes.peak_power | float(0) | round(1) }}"
-  protocol: "{{ trigger.to_state.attributes.protocol | default('unknown') }}"
+  # Every one of these reaches for the attribute rather than naming it.
+  # Variables are rendered before the conditions, on every state change the
+  # trigger sees -- including the entity coming up at startup with no event
+  # behind it yet -- so naming an attribute that is not there would fill the
+  # log with rendering errors before the condition ever got its say.
+  attrs: "{{ trigger.to_state.attributes if trigger.to_state else {} }}"
+  energy: "{{ attrs.get('energy_wh') | float(0) | round(1) }}"
+  seconds: "{{ attrs.get('duration') | int(0) }}"
+  peak: "{{ attrs.get('peak_power') | float(0) | round(1) }}"
+  protocol: "{{ attrs.get('protocol') or 'unknown' }}"
   # Hours and minutes read better than 7412 seconds, and a session under a
   # minute reads better as seconds than as "0 minutes".
   spent: >-
