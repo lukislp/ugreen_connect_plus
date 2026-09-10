@@ -1,3 +1,10 @@
+## [0.24.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.24.0...v0.24.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* name the case that actually sends people to this option ([365e200](https://github.com/lukislp/ugreen_connect_plus/commit/365e200d42dd1f6f3452702bc942258b5ed3aa3c))
+
 # [0.24.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.23.2...v0.24.0) (2026-09-09)
 
 
