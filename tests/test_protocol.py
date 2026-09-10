@@ -224,3 +224,49 @@ def test_the_state_reply_is_only_read_where_it_has_been_seen():
 def test_a_model_can_be_named_without_its_screen_being_understood():
     assert "X776" in p.PORTS_BY_MODEL
     assert "X776" not in p.STATE_VERIFIED
+
+
+# --- a second model, from its owner's charger ------------------------------
+#
+# Captured on a Nexode Pro 160W and posted to
+# https://github.com/s1mptom/ugreen_connect/issues/2 -- the first frames here
+# that came off hardware nobody here owns. Devices were on the built-in cable
+# and on C2 while these were taken, which is what makes them worth keeping: the
+# port order is not asserted by the table, it is visible in which records move.
+
+X776_FRAME = (
+    "aa06002000c70005006301000000000000000035001f00a401"
+    "00000000000000050005005c4d"
+)
+
+
+def test_the_160w_report_is_four_records_and_four_protocol_bytes():
+    body = p.frame_body(X776_FRAME, p.FRAME_QUERY, p.QUERY_GET_POWER_INFO)
+    assert body is not None            # CRC holds, so these bytes are as sent
+    assert len(body) == 32             # 4 * 7 + 4, no byte left off
+    assert body[28:32].hex() == "05000500"
+
+
+def test_the_160w_ports_are_named_in_the_order_they_are_wired():
+    ports = p.parse_power_frame(X776_FRAME, "X776")
+    assert ports is not None
+    # The two the owner had something plugged into, and only those.
+    assert ports["C-Cable"] == {
+        "voltage": 19.9, "current": 0.5, "power": 9.9, "protocol": "PD"
+    }
+    assert ports["C2"]["voltage"] == 5.3
+    assert ports["C1"]["voltage"] == 0.0
+    assert ports["A"]["voltage"] == 0.0
+
+
+def test_the_160w_is_read_even_by_a_version_that_has_never_heard_of_it():
+    # The same frame with the model withheld: four ports, same readings,
+    # numbered instead of named.
+    ports = p.parse_power_frame(X776_FRAME)
+    assert ports is not None and len(ports) == 4
+    assert ports["P1"] == p.parse_power_frame(X776_FRAME, "X776")["C-Cable"]
+
+
+def test_the_160w_screen_is_still_not_guessed_at():
+    # Ports confirmed, state offsets not -- and the custom block writes back.
+    assert p.state_is_readable("X776") is False
