@@ -1,4 +1,4 @@
-"""Config flow for UGREEN Connect."""
+"""Config flow for UGREEN Connect Plus."""
 
 from __future__ import annotations
 

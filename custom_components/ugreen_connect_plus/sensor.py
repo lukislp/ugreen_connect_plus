@@ -1,4 +1,4 @@
-"""Sensor platform for UGREEN Connect.
+"""Sensor platform for UGREEN Connect Plus.
 
 Two kinds of entity are published: the account's device inventory with its
 online state, and -- for chargers that answer the RTCX gateway's binary

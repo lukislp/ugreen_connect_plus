@@ -1,4 +1,4 @@
-"""Diagnostics support for UGREEN Connect."""
+"""Diagnostics support for UGREEN Connect Plus."""
 
 from __future__ import annotations
 

@@ -95,7 +95,9 @@ async def async_register(hass: HomeAssistant) -> None:
         entry = hass.config_entries.async_get_entry(entry_id) if entry_id else None
         coordinator = getattr(entry, "runtime_data", None)
         if coordinator is None:
-            raise HomeAssistantError("That device does not belong to UGREEN Connect")
+            raise HomeAssistantError(
+                "That device does not belong to UGREEN Connect Plus"
+            )
 
         key = next(
             (i for domain, i in device.identifiers if domain == DOMAIN),

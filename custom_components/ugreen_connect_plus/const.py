@@ -1,4 +1,4 @@
-"""Constants for the UGREEN Connect integration."""
+"""Constants for the UGREEN Connect Plus integration."""
 
 from __future__ import annotations
 

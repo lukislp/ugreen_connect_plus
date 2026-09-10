@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "UGREEN Connect",
+        "title": "UGREEN Connect Plus",
         "description": "Sign in with the same account you use in the UgreenConnect app. Pick the region your account was registered in — accounts are not shared between regions. Everything else has a sensible default and can be changed afterwards.",
         "data": {
           "email": "Email",
@@ -17,7 +17,7 @@
         }
       },
       "reauth_confirm": {
-        "title": "Re-authenticate UGREEN Connect",
+        "title": "Sign in to UGREEN Connect Plus again",
         "description": "The password for {email} was rejected. Enter it again.",
         "data": {
           "password": "Password"
@@ -255,7 +255,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "UGREEN Connect options",
+        "title": "UGREEN Connect Plus options",
         "data": {
           "scan_interval": "Poll every",
           "region": "Region",

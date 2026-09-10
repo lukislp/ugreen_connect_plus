@@ -1,4 +1,4 @@
-"""Polling coordinator for UGREEN Connect."""
+"""Polling coordinator for UGREEN Connect Plus."""
 
 from __future__ import annotations
 

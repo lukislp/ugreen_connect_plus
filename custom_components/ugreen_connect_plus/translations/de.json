@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "UGREEN Connect",
+        "title": "UGREEN Connect Plus",
         "description": "Melde dich mit demselben Konto an, das du in der UgreenConnect-App verwendest. Wähle die Region, in der dein Konto registriert wurde — Konten werden nicht zwischen Regionen geteilt. Alles Weitere ist sinnvoll voreingestellt und lässt sich nachträglich ändern.",
         "data": {
           "email": "E-Mail",
@@ -17,7 +17,7 @@
         }
       },
       "reauth_confirm": {
-        "title": "UGREEN Connect neu anmelden",
+        "title": "UGREEN Connect Plus neu anmelden",
         "description": "Das Passwort für {email} wurde abgelehnt. Gib es erneut ein.",
         "data": {
           "password": "Passwort"
@@ -255,7 +255,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "UGREEN-Connect-Optionen",
+        "title": "UGREEN-Connect-Plus-Optionen",
         "data": {
           "scan_interval": "Abfrage alle",
           "region": "Region",
