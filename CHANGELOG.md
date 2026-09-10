@@ -1,3 +1,10 @@
+# [0.25.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.24.1...v0.25.0) (2026-09-10)
+
+
+### Features
+
+* understand a charger one field at a time ([85a6ed8](https://github.com/lukislp/ugreen_connect_plus/commit/85a6ed8bc603bf3d8ca0427ab4189ba1f82164c5))
+
 ## [0.24.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.24.0...v0.24.1) (2026-09-10)
 
 
