@@ -26,10 +26,10 @@ jobs:
     name: HACS
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Referenced by branch on purpose: it validates against what HACS
       # requires now, not a ruleset frozen at the time of writing.
-      - uses: hacs/action@main
+      - uses: hacs/action@1ebf01c408f29afcb6406bd431bc98fd8cbb15aa # main
         with:
           category: integration
 
@@ -37,7 +37,7 @@ jobs:
     name: Home Assistant manifest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # hassfest runs from an image on ghcr.io, and the registry throttles
       # hard enough -- registry-wide, not per account, so a token does not
       # help -- that the same commit passes or fails depending on the hour.
@@ -55,14 +55,14 @@ jobs:
           done
           echo "::error::ghcr.io would not hand over the hassfest image after five attempts"
           exit 1
-      - uses: home-assistant/actions/hassfest@master
+      - uses: home-assistant/actions/hassfest@58bff37c8947f690ace498be413a9b78d6f30f93 # master
 
   test-lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
       - run: pip install ruff
@@ -72,8 +72,8 @@ jobs:
     name: Session logic
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
       # session.py carries no Home Assistant imports precisely so its rules can
@@ -86,7 +86,7 @@ jobs:
     name: Home Assistant layer
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # These run inside the image the integration actually runs in, rather
       # than against a Home Assistant pip put next to them.
       #
@@ -141,7 +141,7 @@ jobs:
     outputs:
       published: ${{ steps.semrel.outputs.new_release_published }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The branch tip rather than the pushed SHA: a release commit marked
           # skip ci can land between the push and this job, and semantic-release
@@ -200,7 +200,7 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0
@@ -227,7 +227,7 @@ jobs:
           echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" >> ~/.ssh/known_hosts
           git remote set-url origin "git@github.com:${{ github.repository }}.git"
           echo "GIT_SSH_COMMAND=ssh -i ~/.ssh/semantic_release -o IdentitiesOnly=yes" >> "$GITHUB_ENV"
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
       - id: semrel
