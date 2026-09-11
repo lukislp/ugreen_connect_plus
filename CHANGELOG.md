@@ -1,3 +1,10 @@
+## [0.27.1](https://github.com/lukislp/ugreen_connect_plus/compare/v0.27.0...v0.27.1) (2026-09-11)
+
+
+### Bug Fixes
+
+* **ci:** push release commits as a deploy key so the default branch can be ruleset-protected ([5cf1b39](https://github.com/lukislp/ugreen_connect_plus/commit/5cf1b39d0854fa7f61a9a50d0a5d592d29aeb403))
+
 # [0.27.0](https://github.com/lukislp/ugreen_connect_plus/compare/v0.26.1...v0.27.0) (2026-09-10)
 
 
