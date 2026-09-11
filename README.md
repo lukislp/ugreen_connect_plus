@@ -1,5 +1,7 @@
 # UGREEN Connect Plus for Home Assistant
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/lukislp/ugreen_connect_plus/badge)](https://scorecard.dev/viewer/?uri=github.com/lukislp/ugreen_connect_plus) [![CodeQL](https://github.com/lukislp/ugreen_connect_plus/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/lukislp/ugreen_connect_plus/security/code-scanning)
+
 Home Assistant integration for chargers managed by the **UgreenConnect** app
 (`*.ugreeniot.com`). Developed against a **UGREEN Nexode Pro 300W (X783)** —
 sold as the *Nexode Pro Smart Display Desktop Charger, 300W, 8-Port, GaN*.
